@@ -1,77 +1,97 @@
-# Plan — Lots 1 & 2 (exécution parallèle)
 
-Périmètre extrait de votre brief précédent. Avant de coder, je veux verrouiller le scope car certains points nécessitent des arbitrages produit et de l'infra côté Supabase.
+## Plan d'implémentation
 
-## Lot 1 — Workflow & UX
+### 1. Export RGPD (côté membre)
 
-1. **Application automatique de l'Art. 71**
-   - Quand un nouvel adhérent est validé, calcul automatique du droit d'adhésion + 1ère cotisation selon barème Art. 71.
-   - Génération automatique d'une ligne `cotisations` "droit d'adhésion" + ligne "cotisation M+0".
-   - Trigger DB côté `members` (après passage à `actif`).
+**Nouvelle page** `src/routes/membre/confidentialite.tsx` (lien dans `MembreLayout` et `profil.tsx`) :
+- Bouton « Exporter mes données (JSON) » + bouton « Exporter (PDF récap) »
+- Bouton « Demander la suppression de mon compte » (voir §4)
 
-2. **Workflow cascade visuel dans `/admin/prestations`**
-   - Stepper visuel (Secrétariat → Trésorier → Président → Paiement).
-   - Boutons Valider / Rejeter conditionnés au rôle (`has_role`).
-   - Table `prestation_validations` déjà présente — j'ajoute la logique UI + serverFn `validate_prestation_step`.
+**Server function** `src/lib/rgpd.functions.ts` (`requireSupabaseAuth`) :
+- `exportMyData` : agrège `members`, `dependants`, `subscriptions`, `cotisations`, `prestation_requests`, `documents`, `member_documents`, `notifications`, `notifications_log` filtrés sur l'utilisateur courant → renvoie un JSON structuré (zippé base64 si volumineux). Téléchargement déclenché côté client via Blob.
+- Log dans `sensitive_audit_log` (`scope='rgpd'`, `action='export'`).
 
-3. **PWA install prompt intelligent**
-   - Composant déjà présent (`PWAInstallPrompt.tsx`) à enrichir :
-     - Détection iOS vs Android/Desktop (instructions adaptées).
-     - Déclenchement post-login uniquement, 1 fois / 14 jours (localStorage).
-     - Bouton "Installer maintenant" qui appelle `deferredPrompt.prompt()` réellement.
+### 2. Suppression RGPD (demande, pas auto-suppression)
 
-4. **Base UI Brevo dans `/admin/notifications`**
-   - Champs : clé API Brevo, sender name, sender email, template IDs (signup, password reset, prestation validée, cotisation rappel).
-   - Stockage dans `notification_provider_settings` (table existante).
-   - **Pas d'envoi réel dans ce lot** — juste la config + test "envoyer un mail test".
-   - Secret `BREVO_API_KEY` à ajouter via secrets tool (je vous le demanderai au moment voulu).
+Règle métier : **un membre ne peut PAS supprimer son compte lui-même**. Il dépose une **demande** qu'un super_admin traite.
 
-## Lot 2 — Industrialisation
+**Migration** : nouvelle table `account_deletion_requests`
+- Colonnes : `id`, `user_id`, `member_id`, `motif`, `statut` (`en_attente`/`approuve`/`rejete`/`traite`), `requested_at`, `processed_at`, `processed_by`, `notes_admin`
+- GRANT + RLS : insert/select propriétaire (`auth.uid() = user_id`), update super_admin uniquement
+- Trigger d'audit dans `sensitive_audit_log`
 
-5. **Import masse Excel/CSV des membres**
-   - Page `/admin/membres` → bouton "Importer".
-   - Parse côté client (xlsx), preview, mapping colonnes → serverFn `bulk_import_members` avec validation Zod par ligne.
-   - Table `member_imports` (existante) pour traçabilité.
+**UI membre** (`/membre/confidentialite`) :
+- Formulaire « Demander la suppression » avec motif + double confirmation (case à cocher + saisie du mot « SUPPRIMER »)
+- Affiche le statut de la dernière demande
 
-6. **Reçus PDF par transaction**
-   - À la création/validation d'une transaction (`cotisations` ou `transactions_miprojet`), bouton "Télécharger reçu PDF" + génération à la demande (jspdf, déjà installé), cachet + QR vérif.
+**UI super_admin** (`src/routes/admin/rgpd.tsx`, nouveau) :
+- Liste des demandes, actions « Approuver » / « Rejeter »
+- Approbation = server function qui :
+  - anonymise le `members` (nom/prenoms/email/téléphone/CNI/adresse remplacés par « [supprimé] »)
+  - supprime `dependants`, `documents` storage liés
+  - `supabaseAdmin.auth.admin.deleteUser(user_id)` ou désactivation
+  - Log dans `sensitive_audit_log`
 
-7. **Cron retards J+3 / J+7 / J+14**
-   - Route publique `/api/public/cron/cotisation-reminders` (signature HMAC).
-   - Détecte cotisations en retard et enqueue dans `notification_queue`.
-   - Cron à configurer côté Supabase (pg_cron) — je fournirai le SQL.
+### 3. Import Excel/CSV admin (membres)
 
-8. **Queue notifications + worker**
-   - Route publique `/api/public/cron/process-notifications` qui drain `notification_queue` via Brevo.
-   - Retry x3, statuts `pending/sent/failed/dlq`, log dans `notifications_log`.
+**Nouvelle page** `src/routes/admin/imports.tsx` (lien dans le menu admin) :
+- Étape 1 : upload du fichier (`xlsx` ou `csv`) — parsing client avec `xlsx` (déjà compatible Worker en SSR mais ici on parse côté navigateur)
+- Étape 2 : **mapping colonnes** — UI où chaque colonne source est associée à un champ cible (`nom`, `prenoms`, `email`, `telephone`, `cni`, `date_naissance`, `sexe`, `collectivite`, `region`, `fonction`, `direction`, `matricule_pro`)
+- Étape 3 : **preview** des 20 premières lignes + détection des erreurs (zod validation par ligne : email valide, téléphone format, doublons sur email/cni)
+- Étape 4 : **commit par lot** via server function
 
-9. **Rate limiting**
-   - serverFn middleware utilisant `rate_limit_counters` (table existante) — fenêtre glissante par IP+endpoint pour `/login`, `/inscription`, `/contact`.
+**Server function** `src/lib/member-import.functions.ts` (admin only) :
+- `commitMemberImport({ rows, importId })` :
+  - Crée d'abord un `auth.user` (via `supabaseAdmin.auth.admin.createUser` avec mot de passe temporaire + `email_confirm: true`)
+  - Insert dans `members` avec `is_legacy=true`, `validation_mode='manuel'`, `statut='actif'`
+  - Met à jour `member_imports` (compteurs OK/erreur, report JSON ligne par ligne)
+  - Enfile un email de bienvenue dans `notification_queue` (event `membre.import.bienvenue`)
 
-10. **Mode offline carte membre**
-    - Service worker (`public/sw.js`) → cache la route `/membre/carte` + assets.
-    - Stockage IndexedDB de la dernière carte rendue (PNG) pour affichage offline.
+Dépendance : `xlsx` (à ajouter via `bun add xlsx`).
 
-11. **README technique + RGPD**
-    - `README.md` : stack, env, déploiement, cron, secrets.
-    - Checkbox consentement RGPD sur `/inscription` + page `/confidentialite` (politique).
+### 4. Templates email distincts (Brevo)
 
-## Détails techniques
+Le worker `process-notification-queue` lit déjà `notification_templates` (table existante). Il manque les **templates HTML** par événement.
 
-- **Migrations DB requises** :
-  - Trigger `apply_art71_on_member_activation()`.
-  - Fonction `enqueue_cotisation_reminders()` (utilisée par cron J+3/7/14).
-  - Index sur `notification_queue(status, scheduled_at)`.
-  - Index sur `cotisations(member_id, due_date, status)`.
-- **Secrets à créer** : `BREVO_API_KEY`, `CRON_WEBHOOK_SECRET`.
-- **Dépendances npm** : `xlsx` (import Excel), `@react-email/components` (pas requis ici, on reste sur Brevo direct).
-- **Parallélisation réelle** : Lot 1 et Lot 2 sont indépendants côté code, mais 5/6/8 dépendent de la migration Art.71 (#1) pour les tests bout-en-bout. Je les exécute dans l'ordre : migrations DB → serverFns → UI → cron.
+**Migration de seed** dans `notification_templates` (insert idempotent) pour les events :
+- `cotisation.relance` (3 stages J+3 / J+7 / J+14)
+- `inscription.validee`
+- `inscription.paiement.confirme`
+- `prestation.recue`
+- `prestation.validee`
+- `prestation.rejetee`
+- `membre.import.bienvenue`
+- `compte.suppression.demande`
+- `compte.suppression.approuvee`
 
-## Questions de blocage avant de lancer
+Chaque template aura un `title` et `body` HTML enrichi (placeholders `{{prenoms}}`, `{{nom}}`, `{{stage}}`, `{{matricule}}`…).
 
-1. **Brevo** : avez-vous déjà un compte Brevo + clé API prête, ou je crée juste l'UI vide pour que vous la collez plus tard ? (Lot 1 #4)
-2. **Cron J+3/7/14** : devra être déclenché par un planificateur externe (pg_cron Supabase, ou cron-job.org). OK pour pg_cron ?
-3. **Barème Art. 71** : confirmez les montants exacts (droit d'adhésion, cotisation mensuelle de base) — sinon je mets des constantes paramétrables dans une table `config`.
-4. **Import CSV** : format attendu (colonnes obligatoires) — ou je propose un template basé sur la structure `members` actuelle ?
+**Modif worker** `process-notification-queue.ts` :
+- Si `tpl.body` contient déjà du HTML (`<` détecté), bypasser `buildHtml` et l'envoyer tel quel, sinon garder le wrapping actuel.
+- Conserver `textContent` (strip HTML).
 
-Approuvez le plan (avec réponses aux 4 questions) et je démarre la mise en œuvre dans l'ordre indiqué.
+Brevo : `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` déjà configurés ✅ → rien à brancher en plus. `EMAIL_FROM` est un secret hérité non utilisé par le worker Brevo (le worker lit `BREVO_SENDER_EMAIL`) ; on ne touche pas.
+
+### 5. Fichiers touchés (récap)
+
+**Créés :**
+- `src/routes/membre/confidentialite.tsx`
+- `src/routes/admin/rgpd.tsx`
+- `src/routes/admin/imports.tsx`
+- `src/lib/rgpd.functions.ts`
+- `src/lib/member-import.functions.ts`
+- Migration `account_deletion_requests` + seed `notification_templates`
+
+**Modifiés :**
+- `src/routes/api/public/hooks/process-notification-queue.ts` (HTML passthrough)
+- `src/components/membre/MembreLayout.tsx` (lien Confidentialité)
+- `src/components/admin/*Layout*.tsx` (liens RGPD + Imports)
+- `src/routes/membre/profil.tsx` (lien export/suppression)
+- `package.json` (ajout `xlsx`)
+
+### Détails techniques
+
+- L'export RGPD renvoie un Blob JSON téléchargé via `<a download>` côté client — pas de bucket storage nécessaire.
+- L'import Excel parse côté navigateur (pas de native binary requis) pour éviter les limites Worker.
+- La suppression réelle d'`auth.user` utilise `supabaseAdmin.auth.admin.deleteUser` (clé service_role, déjà côté serveur).
+- Toutes les nouvelles actions sensibles passent par `log_sensitive_event`.
