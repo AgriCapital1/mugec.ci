@@ -1177,6 +1177,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sensitive_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          details: Json
+          id: string
+          ip: string | null
+          occurred_at: string
+          scope: string
+          target_id: string | null
+          target_label: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          details?: Json
+          id?: string
+          ip?: string | null
+          occurred_at?: string
+          scope: string
+          target_id?: string | null
+          target_label?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          details?: Json
+          id?: string
+          ip?: string | null
+          occurred_at?: string
+          scope?: string
+          target_id?: string | null
+          target_label?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -1408,6 +1450,16 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      log_sensitive_event: {
+        Args: {
+          _action: string
+          _details: Json
+          _scope: string
+          _target_id: string
+          _target_label: string
+        }
+        Returns: undefined
+      }
       lookup_member_email_by_phone: {
         Args: { p_phone: string }
         Returns: string
