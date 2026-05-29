@@ -41,6 +41,7 @@ import { Route as AdminMembresRouteImport } from './routes/admin/membres'
 import { Route as AdminDroitsAdhesionRouteImport } from './routes/admin/droits-adhesion'
 import { Route as AdminCotisationsRouteImport } from './routes/admin/cotisations'
 import { Route as AdminActualitesRouteImport } from './routes/admin/actualites'
+import { Route as ApiPublicHooksProcessNotificationQueueRouteImport } from './routes/api/public/hooks/process-notification-queue'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -202,6 +203,12 @@ const AdminActualitesRoute = AdminActualitesRouteImport.update({
   path: '/actualites',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiPublicHooksProcessNotificationQueueRoute =
+  ApiPublicHooksProcessNotificationQueueRouteImport.update({
+    id: '/api/public/hooks/process-notification-queue',
+    path: '/api/public/hooks/process-notification-queue',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin/': typeof AdminIndexRoute
   '/membre/': typeof MembreIndexRoute
+  '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -268,6 +276,7 @@ export interface FileRoutesByTo {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin': typeof AdminIndexRoute
   '/membre': typeof MembreIndexRoute
+  '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -303,6 +312,7 @@ export interface FileRoutesById {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin/': typeof AdminIndexRoute
   '/membre/': typeof MembreIndexRoute
+  '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin/'
     | '/membre/'
+    | '/api/public/hooks/process-notification-queue'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin'
     | '/membre'
+    | '/api/public/hooks/process-notification-queue'
   id:
     | '__root__'
     | '/'
@@ -405,6 +417,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin/'
     | '/membre/'
+    | '/api/public/hooks/process-notification-queue'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -423,6 +436,7 @@ export interface RootRouteChildren {
   ScannerRoute: typeof ScannerRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifierMatriculeRoute: typeof VerifierMatriculeRoute
+  ApiPublicHooksProcessNotificationQueueRoute: typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -651,6 +665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminActualitesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/public/hooks/process-notification-queue': {
+      id: '/api/public/hooks/process-notification-queue'
+      path: '/api/public/hooks/process-notification-queue'
+      fullPath: '/api/public/hooks/process-notification-queue'
+      preLoaderRoute: typeof ApiPublicHooksProcessNotificationQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -731,6 +752,8 @@ const rootRouteChildren: RootRouteChildren = {
   ScannerRoute: ScannerRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifierMatriculeRoute: VerifierMatriculeRoute,
+  ApiPublicHooksProcessNotificationQueueRoute:
+    ApiPublicHooksProcessNotificationQueueRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
