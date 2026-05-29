@@ -1,96 +1,77 @@
-# Plan de finalisation MUGEC-CI / MIPROJET
+# Plan — Lots 1 & 2 (exécution parallèle)
 
-Vu l'ampleur de la demande (10 chantiers), je propose de tout regrouper en **3 lots exécutés séquentiellement**. Chaque lot est livrable de manière autonome ; on enchaîne dès qu'un lot est validé.
+Périmètre extrait de votre brief précédent. Avant de coder, je veux verrouiller le scope car certains points nécessitent des arbitrages produit et de l'infra côté Supabase.
 
-Avant de démarrer, **2 décisions** me sont nécessaires (voir « Questions » en bas).
+## Lot 1 — Workflow & UX
 
----
+1. **Application automatique de l'Art. 71**
+   - Quand un nouvel adhérent est validé, calcul automatique du droit d'adhésion + 1ère cotisation selon barème Art. 71.
+   - Génération automatique d'une ligne `cotisations` "droit d'adhésion" + ligne "cotisation M+0".
+   - Trigger DB côté `members` (après passage à `actif`).
 
-## Lot 1 — CRITIQUE : Connexion, rôles, séparation des espaces, dashboards
+2. **Workflow cascade visuel dans `/admin/prestations`**
+   - Stepper visuel (Secrétariat → Trésorier → Président → Paiement).
+   - Boutons Valider / Rejeter conditionnés au rôle (`has_role`).
+   - Table `prestation_validations` déjà présente — j'ajoute la logique UI + serverFn `validate_prestation_step`.
 
-Objectif : un utilisateur se connecte, est reconnu avec son vrai rôle, atterrit sur son dashboard, et y voit ses vraies données.
+3. **PWA install prompt intelligent**
+   - Composant déjà présent (`PWAInstallPrompt.tsx`) à enrichir :
+     - Détection iOS vs Android/Desktop (instructions adaptées).
+     - Déclenchement post-login uniquement, 1 fois / 14 jours (localStorage).
+     - Bouton "Installer maintenant" qui appelle `deferredPrompt.prompt()` réellement.
 
-### 1.1 Refonte connexion + redirection (sections 1, 2)
-- Migration : changer les mots de passe des 2 comptes admin pour ceux fournis
-  - `adminmgec@mugec-ci.local` → `@Mugec-CI26` (login : `mugecadmin`)
-  - `admininoce@miprojet.local` → `@Massa29012020` (login : `admininoce`)
-  - (Le 3ᵉ compte historique `inoceadmin@miprojet.local` sera désactivé)
-- `resolve_login_email` : mapping explicite `mugecadmin` → `adminmgec@mugec-ci.local`, `admininoce` → `admininoce@miprojet.local`, sinon lookup téléphone
-- `loginWithIdentifier` retourne aussi le `dashboard_path` calculé côté serveur (super_admin → `/admin/miprojet`, admin MUGEC-CI → `/admin`, membre → `/membre`)
-- `login.tsx` : redirection immédiate via `window.location.assign(dashboard_path)` après `setSession`, plus de RPC `current_user_dashboard_path` côté client (évite la race condition session/RLS)
+4. **Base UI Brevo dans `/admin/notifications`**
+   - Champs : clé API Brevo, sender name, sender email, template IDs (signup, password reset, prestation validée, cotisation rappel).
+   - Stockage dans `notification_provider_settings` (table existante).
+   - **Pas d'envoi réel dans ce lot** — juste la config + test "envoyer un mail test".
+   - Secret `BREVO_API_KEY` à ajouter via secrets tool (je vous le demanderai au moment voulu).
 
-### 1.2 Séparation stricte des routes & guards (section 2)
-- Layout `_authenticated` global → vérifie session
-- Layout `_authenticated/admin` → `has_role('admin_national')` OU rôles MUGEC-CI
-- Layout `_authenticated/miprojet` → `has_role('super_admin')` uniquement
-- Layout `_authenticated/membre` → tout user authentifié, mais bloque admins (redirige vers leur espace)
-- Menus dédiés par layout : `AdminMenu`, `MiprojetMenu`, `MembreMenu` — aucun mélange
-- Déplacement de `src/routes/admin/miprojet.tsx` → `src/routes/admin/miprojet/index.tsx` (+ sous-routes propres)
+## Lot 2 — Industrialisation
 
-### 1.3 Dashboards à 000 (sections 3, 8)
-Audit + correctif :
-- Vérifier que `admin_dashboard_stats()` et `miprojet_dashboard_stats()` sont bien appelés via server functions (`createServerFn` + `requireSupabaseAuth`), pas en direct depuis composants
-- Hook `useAuthReady` partout où on requête des données protégées par RLS (évite query avant hydratation session)
-- Membre : nouveau server fn `getMemberDashboard` qui agrège cotisations + droits + statut + ayants droit
-- Ajouter blocs manquants côté admin/miprojet : **Cotisations**, **Droits d'adhésion**, **Revenus globaux** (composants `<StatCard>` réutilisables)
-- Page « Droits d'adhésion » dans le menu Finances → route `/admin/finances/droits-adhesion`
+5. **Import masse Excel/CSV des membres**
+   - Page `/admin/membres` → bouton "Importer".
+   - Parse côté client (xlsx), preview, mapping colonnes → serverFn `bulk_import_members` avec validation Zod par ligne.
+   - Table `member_imports` (existante) pour traçabilité.
 
-### 1.4 RLS / permissions (audit ciblé)
-- Vérifier policies sur `members`, `subscriptions`, `cotisations`, `transactions_miprojet`, `prestation_requests`
-- Confirmer `WITH CHECK` sur INSERT et `TO authenticated` partout
-- Documenter dans `@security-memory`
+6. **Reçus PDF par transaction**
+   - À la création/validation d'une transaction (`cotisations` ou `transactions_miprojet`), bouton "Télécharger reçu PDF" + génération à la demande (jspdf, déjà installé), cachet + QR vérif.
 
-**Livrable lot 1** : connexion fonctionnelle pour les 3 profils, redirections correctes, dashboards affichant les vraies données, blocs financiers présents.
+7. **Cron retards J+3 / J+7 / J+14**
+   - Route publique `/api/public/cron/cotisation-reminders` (signature HMAC).
+   - Détecte cotisations en retard et enqueue dans `notification_queue`.
+   - Cron à configurer côté Supabase (pg_cron) — je fournirai le SQL.
 
----
+8. **Queue notifications + worker**
+   - Route publique `/api/public/cron/process-notifications` qui drain `notification_queue` via Brevo.
+   - Retry x3, statuts `pending/sent/failed/dlq`, log dans `notifications_log`.
 
-## Lot 2 — Carte membre PDF, fiche A4, page d'accueil
+9. **Rate limiting**
+   - serverFn middleware utilisant `rate_limit_counters` (table existante) — fenêtre glissante par IP+endpoint pour `/login`, `/inscription`, `/contact`.
 
-### 2.1 Refonte PDF (section 5)
-- `src/lib/pdf-documents.ts` : 2 générateurs distincts
-  - `generateMemberCardPDF()` : format CR80 (85.6 × 54 mm), recto/verso, logo MUGEC-CI + drapeau CI + QR code + photo, design premium d'après le modèle fourni (CDC_TECHNIQUE_INTERNE_MUGEC-CI-2.pdf)
-  - `generateMemberFichePDF()` : A4 premium, infos perso + ayants droit + QR + photo + branding + filigrane
-- Aperçu avant téléchargement via `<iframe>` du blob URL (rendu identique à l'impression — utilisation de `pdf-lib` ou `jspdf` selon ce qui est déjà installé)
-- Routes `/membre/carte` et `/membre/fiche` : preview + bouton download
+10. **Mode offline carte membre**
+    - Service worker (`public/sw.js`) → cache la route `/membre/carte` + assets.
+    - Stockage IndexedDB de la dernière carte rendue (PNG) pour affichage offline.
 
-### 2.2 Stabilité homepage (section 7)
-- Audit `src/routes/index.tsx`, `__root.tsx`, service worker (`public/sw.js`, `src/lib/register-sw.ts`)
-- Vérifier que le SW ne sert pas une version stale → ajouter `skipWaiting` + `clients.claim`, bumper la version cache
-- Supprimer doublons d'éléments hero/sections si présents
-- Vérifier hydration TanStack Query (pas de `useEffect+fetch` au mount)
-
-**Livrable lot 2** : carte et fiche PDF conformes au modèle, téléchargement = impression, homepage stable et cohérente à chaque chargement.
-
----
-
-## Lot 3 — Audit final + classement du reste
-
-### 3.1 Vérification complète (sections 4, 6, 9)
-- Parcours de toutes les routes : aucun lien mort, aucun doublon
-- Vérification que le **système de paiement fictif est intact** (pas touché aux montants simulés, génération opérations OK, répartition MUGEC-CI/MIPROJET OK)
-- Audit RLS final + script de vérif `dashboard_sync_health()` lancé et résultats commentés
-
-### 3.2 Analyse projet vs CDC (section 10)
-Comparaison module par module avec `CDC_TECHNIQUE_INTERNE_MUGEC-CI.pdf` :
-- Tableau récapitulatif : fait / partiel / non fait / non conforme
-- Classement du reste en **3 lots maximum** avec : éléments, % avancement, priorité, dépendances, état réel
-- Livré sous forme de document `/mnt/documents/audit-final-mugec-ci.md`
-
-**Livrable lot 3** : rapport d'audit final + roadmap des 3 lots restants.
-
----
+11. **README technique + RGPD**
+    - `README.md` : stack, env, déploiement, cron, secrets.
+    - Checkbox consentement RGPD sur `/inscription` + page `/confidentialite` (politique).
 
 ## Détails techniques
 
-- Toute la logique serveur passe par `createServerFn` + `requireSupabaseAuth` (pas d'Edge Functions)
-- Les mots de passe admin sont écrits via migration `UPDATE auth.users SET encrypted_password = crypt('...', gen_salt('bf'))` — les valeurs littérales du repo seront immédiatement signalées par le scanner ; les valeurs étant fournies par toi en clair dans ce message, elles sont déjà publiques, donc pas de régression sécurité par rapport au statu quo. Je marquerai le finding comme « accepté par l'utilisateur » dans la security memory.
-- Aucun changement au système de paiement simulé.
-- Routes existantes préservées tant que possible ; les nouveaux layouts ne cassent pas les URLs publiques.
+- **Migrations DB requises** :
+  - Trigger `apply_art71_on_member_activation()`.
+  - Fonction `enqueue_cotisation_reminders()` (utilisée par cron J+3/7/14).
+  - Index sur `notification_queue(status, scheduled_at)`.
+  - Index sur `cotisations(member_id, due_date, status)`.
+- **Secrets à créer** : `BREVO_API_KEY`, `CRON_WEBHOOK_SECRET`.
+- **Dépendances npm** : `xlsx` (import Excel), `@react-email/components` (pas requis ici, on reste sur Brevo direct).
+- **Parallélisation réelle** : Lot 1 et Lot 2 sont indépendants côté code, mais 5/6/8 dépendent de la migration Art.71 (#1) pour les tests bout-en-bout. Je les exécute dans l'ordre : migrations DB → serverFns → UI → cron.
 
----
+## Questions de blocage avant de lancer
 
-## Questions avant exécution
+1. **Brevo** : avez-vous déjà un compte Brevo + clé API prête, ou je crée juste l'UI vide pour que vous la collez plus tard ? (Lot 1 #4)
+2. **Cron J+3/7/14** : devra être déclenché par un planificateur externe (pg_cron Supabase, ou cron-job.org). OK pour pg_cron ?
+3. **Barème Art. 71** : confirmez les montants exacts (droit d'adhésion, cotisation mensuelle de base) — sinon je mets des constantes paramétrables dans une table `config`.
+4. **Import CSV** : format attendu (colonnes obligatoires) — ou je propose un template basé sur la structure `members` actuelle ?
 
-1. **Mots de passe admin dans le repo** : tu m'as donné `@Mugec-CI26` et `@Massa29012020` en clair. Je les écris dans une migration (donc visibles dans l'historique git public). Confirmes-tu ? Sinon je peux générer 2 mots de passe aléatoires et te les renvoyer une seule fois dans la chat (à reset ensuite dans Supabase Dashboard).
-
-2. **Démarrer par le Lot 1 maintenant** ? Les lots 2 et 3 suivent dès que le lot 1 est validé visuellement. Sinon dis-moi quel ordre tu préfères.
+Approuvez le plan (avec réponses aux 4 questions) et je démarre la mise en œuvre dans l'ordre indiqué.
