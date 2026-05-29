@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          description: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: Json
+          description?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          description?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -458,6 +482,8 @@ export type Database = {
           prenoms: string
           qr_code: string | null
           region: string | null
+          rgpd_consent_at: string | null
+          rgpd_consent_version: string | null
           sexe: string | null
           source: string
           statut: string
@@ -502,6 +528,8 @@ export type Database = {
           prenoms: string
           qr_code?: string | null
           region?: string | null
+          rgpd_consent_at?: string | null
+          rgpd_consent_version?: string | null
           sexe?: string | null
           source?: string
           statut?: string
@@ -546,6 +574,8 @@ export type Database = {
           prenoms?: string
           qr_code?: string | null
           region?: string | null
+          rgpd_consent_at?: string | null
+          rgpd_consent_version?: string | null
           sexe?: string | null
           source?: string
           statut?: string
