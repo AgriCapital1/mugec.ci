@@ -42,6 +42,7 @@ import { Route as AdminMembresRouteImport } from './routes/admin/membres'
 import { Route as AdminDroitsAdhesionRouteImport } from './routes/admin/droits-adhesion'
 import { Route as AdminCotisationsRouteImport } from './routes/admin/cotisations'
 import { Route as AdminActualitesRouteImport } from './routes/admin/actualites'
+import { Route as ApiPublicHooksResetAdminCredentialsRouteImport } from './routes/api/public/hooks/reset-admin-credentials'
 import { Route as ApiPublicHooksProcessNotificationQueueRouteImport } from './routes/api/public/hooks/process-notification-queue'
 import { Route as ApiPublicHooksEnqueueCotisationRemindersRouteImport } from './routes/api/public/hooks/enqueue-cotisation-reminders'
 
@@ -210,6 +211,12 @@ const AdminActualitesRoute = AdminActualitesRouteImport.update({
   path: '/actualites',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiPublicHooksResetAdminCredentialsRoute =
+  ApiPublicHooksResetAdminCredentialsRouteImport.update({
+    id: '/api/public/hooks/reset-admin-credentials',
+    path: '/api/public/hooks/reset-admin-credentials',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessNotificationQueueRoute =
   ApiPublicHooksProcessNotificationQueueRouteImport.update({
     id: '/api/public/hooks/process-notification-queue',
@@ -259,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/membre/': typeof MembreIndexRoute
   '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
+  '/api/public/hooks/reset-admin-credentials': typeof ApiPublicHooksResetAdminCredentialsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -294,6 +302,7 @@ export interface FileRoutesByTo {
   '/membre': typeof MembreIndexRoute
   '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
+  '/api/public/hooks/reset-admin-credentials': typeof ApiPublicHooksResetAdminCredentialsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -332,6 +341,7 @@ export interface FileRoutesById {
   '/membre/': typeof MembreIndexRoute
   '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
+  '/api/public/hooks/reset-admin-credentials': typeof ApiPublicHooksResetAdminCredentialsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
     | '/membre/'
     | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
+    | '/api/public/hooks/reset-admin-credentials'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -406,6 +417,7 @@ export interface FileRouteTypes {
     | '/membre'
     | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
+    | '/api/public/hooks/reset-admin-credentials'
   id:
     | '__root__'
     | '/'
@@ -443,6 +455,7 @@ export interface FileRouteTypes {
     | '/membre/'
     | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
+    | '/api/public/hooks/reset-admin-credentials'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -464,6 +477,7 @@ export interface RootRouteChildren {
   VerifierMatriculeRoute: typeof VerifierMatriculeRoute
   ApiPublicHooksEnqueueCotisationRemindersRoute: typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   ApiPublicHooksProcessNotificationQueueRoute: typeof ApiPublicHooksProcessNotificationQueueRoute
+  ApiPublicHooksResetAdminCredentialsRoute: typeof ApiPublicHooksResetAdminCredentialsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -699,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminActualitesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/public/hooks/reset-admin-credentials': {
+      id: '/api/public/hooks/reset-admin-credentials'
+      path: '/api/public/hooks/reset-admin-credentials'
+      fullPath: '/api/public/hooks/reset-admin-credentials'
+      preLoaderRoute: typeof ApiPublicHooksResetAdminCredentialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-notification-queue': {
       id: '/api/public/hooks/process-notification-queue'
       path: '/api/public/hooks/process-notification-queue'
@@ -798,6 +819,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksEnqueueCotisationRemindersRoute,
   ApiPublicHooksProcessNotificationQueueRoute:
     ApiPublicHooksProcessNotificationQueueRoute,
+  ApiPublicHooksResetAdminCredentialsRoute:
+    ApiPublicHooksResetAdminCredentialsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
