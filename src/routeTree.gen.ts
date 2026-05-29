@@ -42,6 +42,7 @@ import { Route as AdminDroitsAdhesionRouteImport } from './routes/admin/droits-a
 import { Route as AdminCotisationsRouteImport } from './routes/admin/cotisations'
 import { Route as AdminActualitesRouteImport } from './routes/admin/actualites'
 import { Route as ApiPublicHooksProcessNotificationQueueRouteImport } from './routes/api/public/hooks/process-notification-queue'
+import { Route as ApiPublicHooksEnqueueCotisationRemindersRouteImport } from './routes/api/public/hooks/enqueue-cotisation-reminders'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -209,6 +210,12 @@ const ApiPublicHooksProcessNotificationQueueRoute =
     path: '/api/public/hooks/process-notification-queue',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksEnqueueCotisationRemindersRoute =
+  ApiPublicHooksEnqueueCotisationRemindersRouteImport.update({
+    id: '/api/public/hooks/enqueue-cotisation-reminders',
+    path: '/api/public/hooks/enqueue-cotisation-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin/': typeof AdminIndexRoute
   '/membre/': typeof MembreIndexRoute
+  '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 export interface FileRoutesByTo {
@@ -276,6 +284,7 @@ export interface FileRoutesByTo {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin': typeof AdminIndexRoute
   '/membre': typeof MembreIndexRoute
+  '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 export interface FileRoutesById {
@@ -312,6 +321,7 @@ export interface FileRoutesById {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin/': typeof AdminIndexRoute
   '/membre/': typeof MembreIndexRoute
+  '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 export interface FileRouteTypes {
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin/'
     | '/membre/'
+    | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -382,6 +393,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin'
     | '/membre'
+    | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
   id:
     | '__root__'
@@ -417,6 +429,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin/'
     | '/membre/'
+    | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
   fileRoutesById: FileRoutesById
 }
@@ -436,6 +449,7 @@ export interface RootRouteChildren {
   ScannerRoute: typeof ScannerRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VerifierMatriculeRoute: typeof VerifierMatriculeRoute
+  ApiPublicHooksEnqueueCotisationRemindersRoute: typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   ApiPublicHooksProcessNotificationQueueRoute: typeof ApiPublicHooksProcessNotificationQueueRoute
 }
 
@@ -672,6 +686,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProcessNotificationQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/enqueue-cotisation-reminders': {
+      id: '/api/public/hooks/enqueue-cotisation-reminders'
+      path: '/api/public/hooks/enqueue-cotisation-reminders'
+      fullPath: '/api/public/hooks/enqueue-cotisation-reminders'
+      preLoaderRoute: typeof ApiPublicHooksEnqueueCotisationRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -752,6 +773,8 @@ const rootRouteChildren: RootRouteChildren = {
   ScannerRoute: ScannerRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   VerifierMatriculeRoute: VerifierMatriculeRoute,
+  ApiPublicHooksEnqueueCotisationRemindersRoute:
+    ApiPublicHooksEnqueueCotisationRemindersRoute,
   ApiPublicHooksProcessNotificationQueueRoute:
     ApiPublicHooksProcessNotificationQueueRoute,
 }
