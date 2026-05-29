@@ -9,6 +9,8 @@ import jsPDF from "jspdf";
 import QRCode from "qrcode";
 import watermarkUrl from "@/assets/mugec-watermark.png";
 import logoUrl from "@/assets/mugec-logo-header.png";
+import cachetUrl from "@/assets/cachet-mugec.png";
+import signatureUrl from "@/assets/signature-president.png";
 
 export type AyantDroitItem = {
   type: "pere" | "mere" | "conjoint" | "enfant" | "";
@@ -117,21 +119,24 @@ async function drawCertificate(pdf: jsPDF, reference: string) {
   const qrY = pageH - qrSize - 30;
   pdf.addImage(qrData, "PNG", qrX, qrY, qrSize, qrSize);
   pdf.setFontSize(7); pdf.setTextColor(80, 80, 80); pdf.setFont("helvetica", "normal");
-  pdf.text("Vérifier", qrX + qrSize / 2, qrY + qrSize + 3, { align: "center" });
-  pdf.text(reference.slice(0, 18), qrX + qrSize / 2, qrY + qrSize + 6, { align: "center" });
-  // Cachet circulaire
-  const cx = 35, cy = pageH - 45, rOut = 16, rIn = 12;
-  pdf.setDrawColor(BRAND_BLUE[0], BRAND_BLUE[1], BRAND_BLUE[2]); pdf.setLineWidth(0.8);
-  pdf.circle(cx, cy, rOut); pdf.circle(cx, cy, rIn);
-  pdf.setTextColor(BRAND_BLUE[0], BRAND_BLUE[1], BRAND_BLUE[2]);
-  pdf.setFont("times", "bold"); pdf.setFontSize(8);
-  pdf.text("MUGEC-CI", cx, cy - 2, { align: "center" });
-  pdf.setFontSize(6); pdf.setFont("times", "normal");
-  pdf.text("CACHET", cx, cy + 1, { align: "center" });
-  pdf.text("NUMÉRIQUE", cx, cy + 4, { align: "center" });
-  pdf.setFontSize(5);
-  pdf.text(new Date().toLocaleDateString("fr-FR"), cx, cy + 8, { align: "center" });
-  pdf.setTextColor(0, 0, 0);
+  pdf.text("Vérifier l'authenticité", qrX + qrSize / 2, qrY + qrSize + 3, { align: "center" });
+  pdf.text(reference.slice(0, 22), qrX + qrSize / 2, qrY + qrSize + 6, { align: "center" });
+
+  // Signature présidente + cachet officiel (images uploadées)
+  try {
+    const [sig, stamp] = await Promise.all([loadImage(signatureUrl), loadImage(cachetUrl)]);
+    // Signature à gauche
+    pdf.addImage(sig, "PNG", 22, pageH - 60, 42, 22, undefined, "FAST");
+    pdf.setDrawColor(120); pdf.setLineWidth(0.2);
+    pdf.line(22, pageH - 38, 70, pageH - 38);
+    pdf.setFont("times", "italic"); pdf.setFontSize(8); pdf.setTextColor(60, 60, 60);
+    pdf.text("Le Président de la MUGEC-CI", 46, pageH - 34, { align: "center" });
+    // Cachet superposé partiellement à droite de la signature
+    setOpacity(pdf, 0.85);
+    pdf.addImage(stamp, "PNG", 56, pageH - 62, 28, 28, undefined, "FAST");
+    setOpacity(pdf, 1);
+    pdf.setTextColor(0, 0, 0);
+  } catch { /* ignore image errors */ }
 }
 
 function drawWatermark(pdf: jsPDF, dataUrl: string, opacity = 0.10) {
