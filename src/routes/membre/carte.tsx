@@ -9,6 +9,8 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 import logo from "@/assets/mugec-logo.png";
 import watermarkUrl from "@/assets/mugec-watermark.png";
+import cachetUrl from "@/assets/cachet-mugec.png";
+import signatureUrl from "@/assets/signature-president.png";
 import { Download, Printer, Loader2 } from "lucide-react";
 import QRCode from "qrcode";
 import jsPDF from "jspdf";
@@ -98,7 +100,7 @@ function drawCardFront(pdf: jsPDF, m: Member, qr: string, logoData: string, wate
   pdf.text("QR code vérifiable — marge haute correction pour impression", 64, 50);
 }
 
-function drawCardBack(pdf: jsPDF, m: Member, watermarkData: string) {
+function drawCardBack(pdf: jsPDF, m: Member, watermarkData: string, signatureData: string, cachetData: string) {
   addPdfWatermark(pdf, watermarkData);
   pdf.setDrawColor(30, 91, 168);
   pdf.setLineWidth(0.7);
@@ -106,20 +108,35 @@ function drawCardBack(pdf: jsPDF, m: Member, watermarkData: string) {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(8);
   pdf.setTextColor(30, 91, 168);
-  pdf.text("MUGEC-CI", 42.8, 10, { align: "center" });
+  pdf.text("MUGEC-CI", 42.8, 8, { align: "center" });
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(5.8);
+  pdf.setFontSize(5.4);
   pdf.setTextColor(40, 40, 40);
-  pdf.text("Cette carte est strictement personnelle et demeure la propriété de la MUGEC-CI.", 42.8, 19, { align: "center", maxWidth: 70 });
-  pdf.text("En cas de perte, prévenir immédiatement la mutuelle.", 42.8, 27, { align: "center", maxWidth: 70 });
+  pdf.text("Cette carte est strictement personnelle et demeure la propriété de la MUGEC-CI.", 42.8, 14, { align: "center", maxWidth: 70 });
+  pdf.text("En cas de perte, prévenir immédiatement la mutuelle.", 42.8, 19, { align: "center", maxWidth: 70 });
   pdf.setFont("helvetica", "bold");
-  pdf.text("À retourner à la MUGEC-CI en cas de cessation de qualité de membre.", 42.8, 35, { align: "center", maxWidth: 70 });
+  pdf.text("À retourner à la MUGEC-CI en cas de cessation de qualité de membre.", 42.8, 25, { align: "center", maxWidth: 70 });
+
+  // Signature + cachet (zone basse gauche)
+  try { pdf.addImage(signatureData, "PNG", 5, 30, 28, 14, undefined, "FAST"); } catch { /* noop */ }
+  try {
+    const anyPdf = pdf as unknown as { GState: new (o: { opacity: number }) => unknown; setGState: (g: unknown) => void };
+    anyPdf.setGState(new anyPdf.GState({ opacity: 0.85 }));
+    pdf.addImage(cachetData, "PNG", 22, 28, 18, 18, undefined, "FAST");
+    anyPdf.setGState(new anyPdf.GState({ opacity: 1 }));
+  } catch { /* noop */ }
+  pdf.setFont("helvetica", "italic"); pdf.setFontSize(4.6); pdf.setTextColor(60, 60, 60);
+  pdf.text("Le Président de la MUGEC-CI", 21, 47, { align: "center" });
+
   pdf.setFont("courier", "normal");
+  pdf.setFontSize(6);
   pdf.setTextColor(26, 58, 143);
-  pdf.text(`Matricule : ${m.matricule ?? "—"}`, 42.8, 43, { align: "center" });
+  pdf.text(`Matricule : ${m.matricule ?? "—"}`, 78, 36, { align: "right" });
   pdf.setFont("helvetica", "normal");
   pdf.setTextColor(30, 91, 168);
-  pdf.text("Tél : 07 58 89 43 63 / 07 08 27 67 51", 42.8, 49, { align: "center" });
+  pdf.setFontSize(5.4);
+  pdf.text("Tél : 07 58 89 43 63", 78, 42, { align: "right" });
+  pdf.text("07 08 27 67 51", 78, 46, { align: "right" });
 }
 
 function Page() {
@@ -171,12 +188,16 @@ function Page() {
   async function downloadPDF() {
     setBusy(true);
     try {
-      const logoData = await imageToDataUrl(logo);
-      const watermarkData = await imageToDataUrl(watermarkUrl);
+      const [logoData, watermarkData, signatureData, cachetData] = await Promise.all([
+        imageToDataUrl(logo),
+        imageToDataUrl(watermarkUrl),
+        imageToDataUrl(signatureUrl),
+        imageToDataUrl(cachetUrl),
+      ]);
       const pdf = new jsPDF({ unit: "mm", format: [85.6, 54], orientation: "landscape" });
       drawCardFront(pdf, m, qr, logoData, watermarkData);
       pdf.addPage([85.6, 54], "landscape");
-      drawCardBack(pdf, m, watermarkData);
+      drawCardBack(pdf, m, watermarkData, signatureData, cachetData);
       pdf.save(`carte-membre-recto-verso-${m.matricule ?? "mugec"}.pdf`);
     } finally {
       setBusy(false);

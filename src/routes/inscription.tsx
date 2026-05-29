@@ -494,9 +494,9 @@ function Page() {
                     Acceptations expresses requises pour devenir membre :
                   </p>
                   {[
-                    { k: "consentReglement" as const, label: "J'accepte le Règlement intérieur de la MUGEC-CI." },
-                    { k: "consentPrelevement" as const, label: "J'autorise expressément le prélèvement de mes cotisations selon le calendrier de la mutuelle." },
-                    { k: "consentConfidentialite" as const, label: "Je consens au traitement de mes données conformément à la Clause de confidentialité." },
+                    { k: "consentReglement" as const, label: <>J'accepte le <a href="/documents/reglement-interieur-mugec-ci.pdf" target="_blank" rel="noreferrer" className="text-primary underline">Règlement intérieur</a> de la MUGEC-CI.</> },
+                    { k: "consentPrelevement" as const, label: <>J'autorise expressément le prélèvement de mes cotisations selon le calendrier de la mutuelle.</> },
+                    { k: "consentConfidentialite" as const, label: <>Je consens au traitement de mes données personnelles (RGPD) conformément à la <a href="/confidentialite" target="_blank" rel="noreferrer" className="text-primary underline">politique de confidentialité</a> de la MUGEC-CI.</> },
                   ].map((c) => (
                     <label key={c.k} className="flex items-start gap-2 cursor-pointer">
                       <input

@@ -20,6 +20,7 @@ import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ForumRouteImport } from './routes/forum'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ConfidentialiteRouteImport } from './routes/confidentialite'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ActualitesRouteImport } from './routes/actualites'
 import { Route as IndexRouteImport } from './routes/index'
@@ -97,6 +98,11 @@ const FaqRoute = FaqRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfidentialiteRoute = ConfidentialiteRouteImport.update({
+  id: '/confidentialite',
+  path: '/confidentialite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/actualites': typeof ActualitesRoute
   '/admin': typeof AdminRouteWithChildren
+  '/confidentialite': typeof ConfidentialiteRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/forum': typeof ForumRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/actualites': typeof ActualitesRoute
+  '/confidentialite': typeof ConfidentialiteRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/forum': typeof ForumRoute
@@ -292,6 +300,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/actualites': typeof ActualitesRoute
   '/admin': typeof AdminRouteWithChildren
+  '/confidentialite': typeof ConfidentialiteRoute
   '/contact': typeof ContactRoute
   '/faq': typeof FaqRoute
   '/forum': typeof ForumRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/'
     | '/actualites'
     | '/admin'
+    | '/confidentialite'
     | '/contact'
     | '/faq'
     | '/forum'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/actualites'
+    | '/confidentialite'
     | '/contact'
     | '/faq'
     | '/forum'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/'
     | '/actualites'
     | '/admin'
+    | '/confidentialite'
     | '/contact'
     | '/faq'
     | '/forum'
@@ -437,6 +449,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActualitesRoute: typeof ActualitesRoute
   AdminRoute: typeof AdminRouteWithChildren
+  ConfidentialiteRoute: typeof ConfidentialiteRoute
   ContactRoute: typeof ContactRoute
   FaqRoute: typeof FaqRoute
   ForumRoute: typeof ForumRoute
@@ -530,6 +543,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confidentialite': {
+      id: '/confidentialite'
+      path: '/confidentialite'
+      fullPath: '/confidentialite'
+      preLoaderRoute: typeof ConfidentialiteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -761,6 +781,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActualitesRoute: ActualitesRoute,
   AdminRoute: AdminRouteWithChildren,
+  ConfidentialiteRoute: ConfidentialiteRoute,
   ContactRoute: ContactRoute,
   FaqRoute: FaqRoute,
   ForumRoute: ForumRoute,

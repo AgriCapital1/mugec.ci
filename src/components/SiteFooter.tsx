@@ -30,7 +30,10 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t bg-background/60 py-4 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} MUGEC-CI. Tous droits réservés.
+        © {new Date().getFullYear()} MUGEC-CI. Tous droits réservés. ·{" "}
+        <a href="/confidentialite" className="underline hover:text-primary">
+          Confidentialité & mentions légales
+        </a>
       </div>
     </footer>
   );
