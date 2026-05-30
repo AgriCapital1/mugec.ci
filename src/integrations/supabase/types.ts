@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_requests: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string | null
+          motif: string | null
+          notes_admin: string | null
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string
+          statut: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          motif?: string | null
+          notes_admin?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          statut?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string | null
+          motif?: string | null
+          notes_admin?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          statut?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_config: {
         Row: {
           config_key: string
@@ -1435,6 +1477,10 @@ export type Database = {
       calculate_prestation_amount: {
         Args: { _date_inscription?: string; _type: string }
         Returns: number
+      }
+      can_manage_member_financials: {
+        Args: { _user_id: string }
+        Returns: boolean
       }
       can_manage_payments: { Args: { _user_id: string }; Returns: boolean }
       current_user_dashboard_path: { Args: never; Returns: string }
