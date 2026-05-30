@@ -37,9 +37,10 @@ export const loginWithIdentifier = createServerFn({ method: "POST" })
       auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
     });
 
-    // Use service-role admin client so unauthenticated browsers cannot call
-    // resolve_login_email directly as an email-enumeration oracle.
-    const { data: resolvedEmail, error: resolveError } = await supabaseAdmin.rpc(
+    // Résolution de l'email via RPC SECURITY DEFINER (exécutable par anon
+    // pour permettre la résolution AVANT session). La fonction ne retourne
+    // qu'un email — pas de PII supplémentaire — et applique ses propres règles.
+    const { data: resolvedEmail, error: resolveError } = await authClient.rpc(
       "resolve_login_email",
       {
         p_identifier: identifier,
@@ -48,6 +49,7 @@ export const loginWithIdentifier = createServerFn({ method: "POST" })
     if (resolveError || typeof resolvedEmail !== "string" || resolvedEmail.length === 0) {
       return generic;
     }
+
 
     const { data: signIn, error: signInErr } = await authClient.auth.signInWithPassword({
       email: resolvedEmail,
