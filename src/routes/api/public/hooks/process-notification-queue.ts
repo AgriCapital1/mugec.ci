@@ -87,7 +87,12 @@ type QueueRow = {
 export const Route = createFileRoute("/api/public/hooks/process-notification-queue")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+        const provided = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+        if (!expected || provided !== expected) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         // Pull a batch of pending items
         const { data: rows, error } = await supabaseAdmin
           .from("notification_queue")
