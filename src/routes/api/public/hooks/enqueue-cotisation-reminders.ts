@@ -8,7 +8,12 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const Route = createFileRoute("/api/public/hooks/enqueue-cotisation-reminders")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
+        const provided = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+        if (!expected || provided !== expected) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         const { data, error } = await supabaseAdmin.rpc(
           "enqueue_overdue_cotisation_reminders",
         );
