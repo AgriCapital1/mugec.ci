@@ -121,27 +121,13 @@ export function PWAInstallPrompt() {
             </span>
           </div>
 
-          {device === "ios" ? (
-            <ol className="space-y-1.5 rounded-lg border border-dashed bg-background p-3 text-xs text-muted-foreground">
-              <li>1. Touchez l'icône <b>Partager</b> dans la barre Safari</li>
-              <li>2. Faites défiler et choisissez <b>« Sur l'écran d'accueil »</b></li>
-              <li>3. Confirmez avec <b>Ajouter</b></li>
-            </ol>
-          ) : !deferred ? (
-            <p className="text-xs text-muted-foreground">
-              Ouvrez le menu de votre navigateur, puis touchez <b>« Installer l'application »</b> ou <b>« Ajouter à l'écran d'accueil »</b>.
-            </p>
-          ) : null}
-
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="ghost" size="sm" onClick={dismiss}>
               Plus tard
             </Button>
-            {deferred && device !== "ios" && (
-              <Button size="sm" onClick={install} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> Installer maintenant
-              </Button>
-            )}
+            <Button size="sm" onClick={install} className="gap-1.5">
+              <Download className="h-3.5 w-3.5" /> Installer maintenant
+            </Button>
           </div>
         </div>
       </DialogContent>
