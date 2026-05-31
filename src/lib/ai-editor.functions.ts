@@ -31,16 +31,18 @@ function slugify(s: string) {
 
 async function callGateway(messages: any[], model = "google/gemini-3-flash-preview") {
   const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY non configurée");
+  if (!key) throw new Error("LOVABLE_API_KEY non configurée côté serveur");
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({ model, messages, temperature: 0.7 }),
   });
   if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[ai-editor] gateway error", res.status, body.slice(0, 500));
     if (res.status === 429) throw new Error("Limite IA atteinte, réessayez dans un instant.");
-    if (res.status === 402) throw new Error("Crédits IA épuisés. Rechargez votre espace.");
-    throw new Error(`Erreur IA: ${res.status}`);
+    if (res.status === 402) throw new Error("Crédits IA épuisés. Rechargez votre espace Lovable.");
+    throw new Error(`Erreur IA ${res.status}: ${body.slice(0, 200) || "réponse vide"}`);
   }
   const data = await res.json();
   return data.choices?.[0]?.message?.content ?? "";
