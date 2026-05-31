@@ -121,14 +121,26 @@ async function generateImageDataUrl(prompt: string): Promise<string> {
   return `data:image/png;base64,${b64}`;
 }
 
+const SAFE_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+]);
+
 async function uploadDataUrl(dataUrl: string, folder: string): Promise<string> {
   const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
   if (!m) throw new Error("Image invalide");
-  const ext = m[1].split("/")[1] || "png";
+  const mime = m[1].toLowerCase();
+  if (!SAFE_IMAGE_TYPES.has(mime)) {
+    throw new Error("Type d'image non autorisé (SVG et autres formats actifs refusés)");
+  }
+  const ext = mime.split("/")[1] || "png";
   const buf = Buffer.from(m[2], "base64");
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabaseAdmin.storage.from("content").upload(path, buf, {
-    contentType: m[1], upsert: false,
+    contentType: mime, upsert: false,
   });
   if (error) throw new Error(error.message);
   const { data } = supabaseAdmin.storage.from("content").getPublicUrl(path);
