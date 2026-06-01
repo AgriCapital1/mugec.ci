@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { toast } from "sonner";
-import { useServerFn } from "@tanstack/react-start";
-import { loginWithIdentifier } from "@/lib/login.functions";
+import { loginClientSide } from "@/lib/client-login";
 import logo from "@/assets/mugec-logo.png";
 
 export const Route = createFileRoute("/login")({
@@ -24,7 +23,6 @@ function Page() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const doLogin = useServerFn(loginWithIdentifier);
   const navigate = useNavigate();
 
   async function onSubmit(e: React.FormEvent) {
@@ -36,30 +34,13 @@ function Page() {
     }
     setLoading(true);
     try {
-      const res = await doLogin({ data: { identifier, password, portal: "member" } });
-      if (!res?.ok) {
+      const res = await loginClientSide(identifier, password, "member");
+      if (!res.ok) {
         setErrorMsg("Identifiant ou mot de passe incorrect, veuillez réessayer.");
-        return;
-      }
-      const { error: setErr } = await supabase.auth.setSession({
-        access_token: res.access_token,
-        refresh_token: res.refresh_token,
-      });
-      if (setErr) {
-        console.error("login setSession failed", setErr);
-        setErrorMsg("Identifiant ou mot de passe incorrect, veuillez réessayer.");
-        return;
-      }
-      // dashboard_path is computed server-side inside loginWithIdentifier
-      // from this user's roles — no race condition possible.
-      const target = res.dashboard_path;
-      const { data: verified } = await supabase.auth.getUser();
-      if (!verified.user) {
-        setErrorMsg("Session non reconnue, veuillez réessayer.");
         return;
       }
       toast.success("Bienvenue !");
-      await navigate({ to: target, replace: true });
+      await navigate({ to: res.dashboard_path, replace: true });
     } catch (err) {
       console.error("login failed", err);
       setErrorMsg("Identifiant ou mot de passe incorrect, veuillez réessayer.");
