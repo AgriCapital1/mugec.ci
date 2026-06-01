@@ -1,8 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/lib/supabase";
-import { loginWithIdentifier } from "@/lib/login.functions";
+import { loginClientSide } from "@/lib/client-login";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +36,6 @@ function AdminGate() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const doLogin = useServerFn(loginWithIdentifier);
   const navigate = useNavigate();
 
   useEffect(() => {
