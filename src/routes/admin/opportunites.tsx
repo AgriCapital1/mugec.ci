@@ -210,6 +210,14 @@ function OpportunitesAdmin() {
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{current.id ? "Modifier" : "Nouvelle opportunité"}</DialogTitle></DialogHeader>
+          {debugError && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="font-semibold">Erreur technique détectée</div>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">
+                {debugError}
+              </pre>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-2 space-y-4">
               <div><Label>Titre *</Label><Input value={current.title} onChange={(e) => setCurrent({ ...current, title: e.target.value })} /></div>
