@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { RichEditor } from "@/components/RichEditor";
 import { generateArticle, generateArticleImages, upsertNews, deleteContent } from "@/lib/ai-editor.functions";
+import { deleteContentViaApi, generateArticleImagesViaApi, generateArticleViaApi, shouldUseAiEditorApi, upsertNewsViaApi } from "@/lib/ai-editor-api";
 import { Sparkles, Plus, Edit, Trash2, Wand2, Eye, Image as ImageIcon, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/actualites")({ component: ActualitesPage });
@@ -88,14 +89,22 @@ function ActualitesPage() {
     setGenerating(true);
     setDebugError(null);
     try {
-      const article = await genArticle({ data: { topic: topic.trim(), kind: "actualite" } });
+      const article = shouldUseAiEditorApi()
+        ? await generateArticleViaApi({ topic: topic.trim(), kind: "actualite" })
+        : await genArticle({ data: { topic: topic.trim(), kind: "actualite" } });
       let cover = "";
       let illus: string[] = [];
       if (imageMode !== "none") {
-        const coverRes = await genImages({ data: { prompt: article.image_prompt, mode: "cover", count: 1, folder: "actualites" } });
+        const coverPayload = { prompt: article.image_prompt, mode: "cover" as const, count: 1, folder: "actualites" as const };
+        const coverRes = shouldUseAiEditorApi()
+          ? await generateArticleImagesViaApi(coverPayload)
+          : await genImages({ data: coverPayload });
         cover = coverRes.urls[0] || "";
         if (imageMode === "both") {
-          const illusRes = await genImages({ data: { prompt: article.image_prompt, mode: "illustrations", count: 2, folder: "actualites" } });
+          const illusPayload = { prompt: article.image_prompt, mode: "illustrations" as const, count: 2, folder: "actualites" as const };
+          const illusRes = shouldUseAiEditorApi()
+            ? await generateArticleImagesViaApi(illusPayload)
+            : await genImages({ data: illusPayload });
           illus = illusRes.urls;
         }
       }
@@ -138,7 +147,8 @@ function ActualitesPage() {
         illustrations: current.illustrations ?? [],
       };
       delete payload.created_at;
-      await save({ data: payload });
+      if (shouldUseAiEditorApi()) await upsertNewsViaApi(payload);
+      else await save({ data: payload });
       toast.success("Article enregistré");
       setEditorOpen(false);
       load();
@@ -153,11 +163,18 @@ function ActualitesPage() {
 
   async function handleDelete(a: Article) {
     if (!confirm(`Supprimer "${a.title}" ?`)) return;
+    setDebugError(null);
     try {
-      await del({ data: { id: a.id, kind: "news" } });
+      const payload = { id: a.id, kind: "news" as const };
+      if (shouldUseAiEditorApi()) await deleteContentViaApi(payload);
+      else await del({ data: payload });
       toast.success("Supprimé");
       load();
-    } catch (e: any) { toast.error(e?.message ?? "Erreur"); }
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur suppression : ${details.slice(0, 180)}`);
+    }
   }
 
   return (
