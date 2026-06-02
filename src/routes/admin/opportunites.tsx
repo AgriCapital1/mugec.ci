@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { RichEditor } from "@/components/RichEditor";
 import { generateArticle, generateArticleImages, upsertOpportunite, deleteContent } from "@/lib/ai-editor.functions";
+import { deleteContentViaApi, generateArticleImagesViaApi, generateArticleViaApi, shouldUseAiEditorApi, upsertOpportuniteViaApi } from "@/lib/ai-editor-api";
 import { Sparkles, Plus, Edit, Trash2, Wand2, Image as ImageIcon, Loader2, Briefcase } from "lucide-react";
 
 export const Route = createFileRoute("/admin/opportunites")({ component: OpportunitesAdmin });
@@ -77,13 +78,21 @@ function OpportunitesAdmin() {
     setGenerating(true);
     setDebugError(null);
     try {
-      const article = await genArticle({ data: { topic: topic.trim(), kind: "opportunite" } });
+      const article = shouldUseAiEditorApi()
+        ? await generateArticleViaApi({ topic: topic.trim(), kind: "opportunite" })
+        : await genArticle({ data: { topic: topic.trim(), kind: "opportunite" } });
       let cover = ""; let illus: string[] = [];
       if (imageMode !== "none") {
-        const c = await genImages({ data: { prompt: article.image_prompt, mode: "cover", count: 1, folder: "opportunites" } });
+        const coverPayload = { prompt: article.image_prompt, mode: "cover" as const, count: 1, folder: "opportunites" as const };
+        const c = shouldUseAiEditorApi()
+          ? await generateArticleImagesViaApi(coverPayload)
+          : await genImages({ data: coverPayload });
         cover = c.urls[0] || "";
         if (imageMode === "both") {
-          const i = await genImages({ data: { prompt: article.image_prompt, mode: "illustrations", count: 2, folder: "opportunites" } });
+          const illusPayload = { prompt: article.image_prompt, mode: "illustrations" as const, count: 2, folder: "opportunites" as const };
+          const i = shouldUseAiEditorApi()
+            ? await generateArticleImagesViaApi(illusPayload)
+            : await genImages({ data: illusPayload });
           illus = i.urls;
         }
       }
@@ -112,7 +121,8 @@ function OpportunitesAdmin() {
     try {
       const payload: any = { ...current, id: current.id || undefined };
       delete payload.created_at;
-      await save({ data: payload });
+      if (shouldUseAiEditorApi()) await upsertOpportuniteViaApi(payload);
+      else await save({ data: payload });
       toast.success("Opportunité enregistrée");
       setEditorOpen(false); load();
     } catch (e: any) {
@@ -125,8 +135,18 @@ function OpportunitesAdmin() {
 
   async function handleDelete(o: Opp) {
     if (!confirm(`Supprimer "${o.title}" ?`)) return;
-    try { await del({ data: { id: o.id, kind: "opportunites" } }); toast.success("Supprimé"); load(); }
-    catch (e: any) { toast.error(e?.message ?? "Erreur"); }
+    setDebugError(null);
+    try {
+      const payload = { id: o.id, kind: "opportunites" as const };
+      if (shouldUseAiEditorApi()) await deleteContentViaApi(payload);
+      else await del({ data: payload });
+      toast.success("Supprimé"); load();
+    }
+    catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur suppression : ${details.slice(0, 180)}`);
+    }
   }
 
   return (
