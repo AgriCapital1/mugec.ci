@@ -252,6 +252,14 @@ function ActualitesPage() {
           <DialogHeader>
             <DialogTitle>{current.id ? "Modifier l'actualité" : "Nouvelle actualité"}</DialogTitle>
           </DialogHeader>
+          {debugError && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="font-semibold">Erreur technique détectée</div>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">
+                {debugError}
+              </pre>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-2 space-y-4">
               <div>
