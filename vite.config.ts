@@ -9,15 +9,6 @@ export default defineConfig({
   cloudflare: isVercel ? false : undefined,
   tanstackStart: {
     server: { entry: "server" },
-    spa: isVercel
-      ? {
-          enabled: true,
-          prerender: {
-            outputPath: "/index.html",
-            crawlLinks: false,
-            retryCount: 0,
-          },
-        }
-      : undefined,
+    spa: isVercel ? { enabled: true } : undefined,
   },
 });
