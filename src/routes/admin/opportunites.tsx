@@ -19,6 +19,16 @@ import { Sparkles, Plus, Edit, Trash2, Wand2, Image as ImageIcon, Loader2, Brief
 
 export const Route = createFileRoute("/admin/opportunites")({ component: OpportunitesAdmin });
 
+function readErrorDetails(error: unknown) {
+  if (error instanceof Error) return error.message || error.stack || "Erreur inconnue";
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error, null, 2);
+  } catch {
+    return "Erreur inconnue";
+  }
+}
+
 type Opp = {
   id: string; title: string; slug: string | null; summary: string | null;
   description: string; body: string | null; cover_url: string | null;
@@ -44,6 +54,7 @@ function OpportunitesAdmin() {
   const [imageMode, setImageMode] = useState<"none"|"cover"|"both">("cover");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   const genArticle = useServerFn(generateArticle);
   const genImages = useServerFn(generateArticleImages);
@@ -64,6 +75,7 @@ function OpportunitesAdmin() {
   async function handleGenerate() {
     if (!topic.trim()) { toast.error("Donnez un sujet"); return; }
     setGenerating(true);
+    setDebugError(null);
     try {
       const article = await genArticle({ data: { topic: topic.trim(), kind: "opportunite" } });
       let cover = ""; let illus: string[] = [];
@@ -85,20 +97,29 @@ function OpportunitesAdmin() {
       });
       setGenOpen(false); setEditorOpen(true); setTopic("");
       toast.success("Brouillon généré — relisez puis publiez.");
-    } catch (e: any) { toast.error(e?.message ?? "Erreur"); }
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur IA : ${details.slice(0, 180)}`);
+    }
     finally { setGenerating(false); }
   }
 
   async function handleSave() {
     if (!current.title || !current.body) { toast.error("Titre et contenu requis"); return; }
     setSaving(true);
+    setDebugError(null);
     try {
       const payload: any = { ...current, id: current.id || undefined };
       delete payload.created_at;
       await save({ data: payload });
       toast.success("Opportunité enregistrée");
       setEditorOpen(false); load();
-    } catch (e: any) { toast.error(e?.message ?? "Erreur"); }
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur enregistrement : ${details.slice(0, 180)}`);
+    }
     finally { setSaving(false); }
   }
 
@@ -159,6 +180,14 @@ function OpportunitesAdmin() {
             <DialogDescription>Décrivez l'offre, l'IA rédige le brouillon complet.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {debugError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="font-semibold">Erreur technique détectée</div>
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">
+                  {debugError}
+                </pre>
+              </div>
+            )}
             <div><Label>Sujet</Label>
               <Textarea rows={3} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex : Recrutement agent comptable, Mairie de Yamoussoukro, dépôt 30 juillet" /></div>
             <div><Label>Illustration</Label>
