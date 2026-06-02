@@ -19,6 +19,16 @@ import { Sparkles, Plus, Edit, Trash2, Wand2, Eye, Image as ImageIcon, Loader2 }
 
 export const Route = createFileRoute("/admin/actualites")({ component: ActualitesPage });
 
+function readErrorDetails(error: unknown) {
+  if (error instanceof Error) return error.message || error.stack || "Erreur inconnue";
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error, null, 2);
+  } catch {
+    return "Erreur inconnue";
+  }
+}
+
 type Article = {
   id: string; title: string; slug: string | null; summary: string | null;
   body: string; cover_url: string | null; illustrations: string[] | null;
@@ -43,6 +53,7 @@ function ActualitesPage() {
   const [saving, setSaving] = useState(false);
   const [topic, setTopic] = useState("");
   const [imageMode, setImageMode] = useState<"none"|"cover"|"both">("cover");
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   const genArticle = useServerFn(generateArticle);
   const genImages = useServerFn(generateArticleImages);
@@ -75,6 +86,7 @@ function ActualitesPage() {
   async function handleGenerate() {
     if (!topic.trim()) { toast.error("Donnez un sujet"); return; }
     setGenerating(true);
+    setDebugError(null);
     try {
       const article = await genArticle({ data: { topic: topic.trim(), kind: "actualite" } });
       let cover = "";
@@ -106,7 +118,9 @@ function ActualitesPage() {
       setTopic("");
       toast.success("Brouillon généré — relisez puis publiez.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erreur de génération");
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur IA : ${details.slice(0, 180)}`);
     } finally {
       setGenerating(false);
     }
@@ -115,6 +129,7 @@ function ActualitesPage() {
   async function handleSave() {
     if (!current.title || !current.body) { toast.error("Titre et contenu requis"); return; }
     setSaving(true);
+    setDebugError(null);
     try {
       const payload: any = {
         ...current,
@@ -128,7 +143,9 @@ function ActualitesPage() {
       setEditorOpen(false);
       load();
     } catch (e: any) {
-      toast.error(e?.message ?? "Erreur enregistrement");
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur enregistrement : ${details.slice(0, 180)}`);
     } finally {
       setSaving(false);
     }
@@ -199,6 +216,14 @@ function ActualitesPage() {
             <DialogDescription>Décrivez le sujet — l'IA produira titre, résumé, contenu, catégorie, tags et SEO.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {debugError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="font-semibold">Erreur technique détectée</div>
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">
+                  {debugError}
+                </pre>
+              </div>
+            )}
             <div>
               <Label>Sujet ou brief</Label>
               <Textarea rows={3} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex : Lancement du nouveau service de cotisation mobile money" />
