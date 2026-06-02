@@ -27,10 +27,7 @@ const authed = (token: string) => SUPABASE_URL && PUBLISHABLE_KEY
   : null;
 
 function json(status: number, payload: unknown) {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
+  return { status, payload };
 }
 
 function slugify(s: string) {
@@ -194,24 +191,35 @@ async function deleteContent(input: unknown) {
   return { ok: true };
 }
 
-export default async function handler(request: Request) {
-  if (request.method !== "POST") return json(405, { error: "Méthode non autorisée" });
+export default async function handler(request: any, response: any) {
+  response.setHeader("content-type", "application/json; charset=utf-8");
+  if (request.method !== "POST") {
+    const out = json(405, { error: "Méthode non autorisée" });
+    return response.status(out.status).json(out.payload);
+  }
   try {
-    const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+    const header = request.headers?.authorization || request.headers?.Authorization || "";
+    const token = String(header).replace(/^Bearer\s+/i, "");
     const userId = await assertAdmin(token);
-    const { action, data } = z.object({ action: z.string(), data: z.unknown() }).parse(await request.json());
+    const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+    const { action, data } = z.object({ action: z.string(), data: z.unknown() }).parse(body);
     const result = action === "generateArticle" ? await generateArticle(data)
       : action === "generateArticleImages" ? await generateArticleImages(data)
       : action === "upsertNews" ? await upsertNews(data, userId)
       : action === "upsertOpportunite" ? await upsertOpportunite(data)
       : action === "deleteContent" ? await deleteContent(data)
       : null;
-    if (!result) return json(400, { error: `Action inconnue: ${action}` });
-    return json(200, { result });
+    if (!result) {
+      const out = json(400, { error: `Action inconnue: ${action}` });
+      return response.status(out.status).json(out.payload);
+    }
+    const out = json(200, { result });
+    return response.status(out.status).json(out.payload);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
     console.error("[api/ai-editor]", message, stack);
-    return json(500, { error: message, details: stack });
+    const out = json(500, { error: message, details: stack });
+    return response.status(out.status).json(out.payload);
   }
 }
