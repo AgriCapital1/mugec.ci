@@ -15,9 +15,20 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { RichEditor } from "@/components/RichEditor";
 import { generateArticle, generateArticleImages, upsertNews, deleteContent } from "@/lib/ai-editor.functions";
+import { deleteContentViaApi, generateArticleImagesViaApi, generateArticleViaApi, shouldUseAiEditorApi, upsertNewsViaApi } from "@/lib/ai-editor-api";
 import { Sparkles, Plus, Edit, Trash2, Wand2, Eye, Image as ImageIcon, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/actualites")({ component: ActualitesPage });
+
+function readErrorDetails(error: unknown) {
+  if (error instanceof Error) return error.message || error.stack || "Erreur inconnue";
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error, null, 2);
+  } catch {
+    return "Erreur inconnue";
+  }
+}
 
 type Article = {
   id: string; title: string; slug: string | null; summary: string | null;
@@ -43,6 +54,7 @@ function ActualitesPage() {
   const [saving, setSaving] = useState(false);
   const [topic, setTopic] = useState("");
   const [imageMode, setImageMode] = useState<"none"|"cover"|"both">("cover");
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   const genArticle = useServerFn(generateArticle);
   const genImages = useServerFn(generateArticleImages);
@@ -75,15 +87,24 @@ function ActualitesPage() {
   async function handleGenerate() {
     if (!topic.trim()) { toast.error("Donnez un sujet"); return; }
     setGenerating(true);
+    setDebugError(null);
     try {
-      const article = await genArticle({ data: { topic: topic.trim(), kind: "actualite" } });
+      const article = shouldUseAiEditorApi()
+        ? await generateArticleViaApi({ topic: topic.trim(), kind: "actualite" })
+        : await genArticle({ data: { topic: topic.trim(), kind: "actualite" } });
       let cover = "";
       let illus: string[] = [];
       if (imageMode !== "none") {
-        const coverRes = await genImages({ data: { prompt: article.image_prompt, mode: "cover", count: 1, folder: "actualites" } });
+        const coverPayload = { prompt: article.image_prompt, mode: "cover" as const, count: 1, folder: "actualites" as const };
+        const coverRes = shouldUseAiEditorApi()
+          ? await generateArticleImagesViaApi(coverPayload)
+          : await genImages({ data: coverPayload });
         cover = coverRes.urls[0] || "";
         if (imageMode === "both") {
-          const illusRes = await genImages({ data: { prompt: article.image_prompt, mode: "illustrations", count: 2, folder: "actualites" } });
+          const illusPayload = { prompt: article.image_prompt, mode: "illustrations" as const, count: 2, folder: "actualites" as const };
+          const illusRes = shouldUseAiEditorApi()
+            ? await generateArticleImagesViaApi(illusPayload)
+            : await genImages({ data: illusPayload });
           illus = illusRes.urls;
         }
       }
@@ -106,7 +127,9 @@ function ActualitesPage() {
       setTopic("");
       toast.success("Brouillon généré — relisez puis publiez.");
     } catch (e: any) {
-      toast.error(e?.message ?? "Erreur de génération");
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur IA : ${details.slice(0, 180)}`);
     } finally {
       setGenerating(false);
     }
@@ -115,6 +138,7 @@ function ActualitesPage() {
   async function handleSave() {
     if (!current.title || !current.body) { toast.error("Titre et contenu requis"); return; }
     setSaving(true);
+    setDebugError(null);
     try {
       const payload: any = {
         ...current,
@@ -123,12 +147,15 @@ function ActualitesPage() {
         illustrations: current.illustrations ?? [],
       };
       delete payload.created_at;
-      await save({ data: payload });
+      if (shouldUseAiEditorApi()) await upsertNewsViaApi(payload);
+      else await save({ data: payload });
       toast.success("Article enregistré");
       setEditorOpen(false);
       load();
     } catch (e: any) {
-      toast.error(e?.message ?? "Erreur enregistrement");
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur enregistrement : ${details.slice(0, 180)}`);
     } finally {
       setSaving(false);
     }
@@ -136,11 +163,18 @@ function ActualitesPage() {
 
   async function handleDelete(a: Article) {
     if (!confirm(`Supprimer "${a.title}" ?`)) return;
+    setDebugError(null);
     try {
-      await del({ data: { id: a.id, kind: "news" } });
+      const payload = { id: a.id, kind: "news" as const };
+      if (shouldUseAiEditorApi()) await deleteContentViaApi(payload);
+      else await del({ data: payload });
       toast.success("Supprimé");
       load();
-    } catch (e: any) { toast.error(e?.message ?? "Erreur"); }
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Erreur suppression : ${details.slice(0, 180)}`);
+    }
   }
 
   return (
@@ -199,6 +233,14 @@ function ActualitesPage() {
             <DialogDescription>Décrivez le sujet — l'IA produira titre, résumé, contenu, catégorie, tags et SEO.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {debugError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="font-semibold">Erreur technique détectée</div>
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">
+                  {debugError}
+                </pre>
+              </div>
+            )}
             <div>
               <Label>Sujet ou brief</Label>
               <Textarea rows={3} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Ex : Lancement du nouveau service de cotisation mobile money" />
@@ -227,6 +269,14 @@ function ActualitesPage() {
           <DialogHeader>
             <DialogTitle>{current.id ? "Modifier l'actualité" : "Nouvelle actualité"}</DialogTitle>
           </DialogHeader>
+          {debugError && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="font-semibold">Erreur technique détectée</div>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">
+                {debugError}
+              </pre>
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-2 space-y-4">
               <div>
