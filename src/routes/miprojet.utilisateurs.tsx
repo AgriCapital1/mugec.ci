@@ -14,6 +14,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { listAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser } from "@/lib/admin-users.functions";
+import {
+  shouldUseAdminUsersApi,
+  listAdminUsersApi,
+  createAdminUserApi,
+  updateAdminUserApi,
+  deleteAdminUserApi,
+} from "@/lib/admin-users-api";
 import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy } from "lucide-react";
 
 export const Route = createFileRoute("/miprojet/utilisateurs")({ ssr: false, component: MiprojetUsers });
@@ -36,6 +43,12 @@ const MIPROJET_ROLES = [
   { value: "miprojet_viewer", label: "Lecture seule MIPROJET" },
 ];
 
+function readErrorDetails(error: unknown) {
+  if (error instanceof Error) return error.message || error.stack || "Erreur inconnue";
+  if (typeof error === "string") return error;
+  try { return JSON.stringify(error, null, 2); } catch { return "Erreur inconnue"; }
+}
+
 function MiprojetUsers() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -44,6 +57,7 @@ function MiprojetUsers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [generatedPwd, setGeneratedPwd] = useState<string | null>(null);
+  const [debugError, setDebugError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     portal: "mugec" as "mugec" | "miprojet",
@@ -64,7 +78,12 @@ function MiprojetUsers() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate({ to: "/miprojet" }); return; }
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle();
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
       if (!data) { navigate({ to: "/miprojet" }); return; }
       setAuthorized(true);
     })();
@@ -72,11 +91,17 @@ function MiprojetUsers() {
 
   async function load() {
     setLoading(true);
+    setDebugError(null);
     try {
-      const res = await list();
+      const res = shouldUseAdminUsersApi() ? await listAdminUsersApi() : await list();
       setUsers(res.users ?? []);
-    } catch (e: any) { toast.error(e?.message ?? "Erreur de chargement"); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Chargement : ${details.slice(0, 180)}`);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => { if (authorized) load(); }, [authorized]);
 
@@ -84,36 +109,61 @@ function MiprojetUsers() {
     if (!form.email || !form.full_name) { toast.error("Nom et email requis"); return; }
     setSubmitting(true);
     setGeneratedPwd(null);
+    setDebugError(null);
     try {
-      await create({ data: { ...form, phone: form.phone || undefined, password: form.password || undefined } });
+      const payload = { ...form, phone: form.phone || undefined, password: form.password || undefined };
+      const res: any = shouldUseAdminUsersApi()
+        ? await createAdminUserApi(payload)
+        : await create({ data: payload });
+      const pwd = res?.initial_password || form.password || null;
+      setGeneratedPwd(pwd);
       toast.success(
         form.password
           ? "Utilisateur créé. Communiquez le mot de passe à l'utilisateur."
-          : `Utilisateur créé. Un mot de passe aléatoire a été envoyé par ${form.send_via === "email" ? "email" : "WhatsApp"}.`,
+          : `Utilisateur créé. Mot de passe ${res?.password_delivered === "manual" ? "à transmettre manuellement" : `envoyé par ${res?.password_delivered}`}.`,
       );
-      setDialogOpen(false);
       load();
-    } catch (e: any) { toast.error(e?.message ?? "Erreur"); }
-    finally { setSubmitting(false); }
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Création : ${details.slice(0, 200)}`);
+    } finally {
+      setSubmitting(false);
+    }
   }
-
 
   async function handleResetPwd(uid: string) {
     if (!confirm("Réinitialiser le mot de passe ?")) return;
+    setDebugError(null);
     try {
-      const res = await update({ data: { user_id: uid, reset_password: true } });
-      const pwd = (res as any).password;
+      const res: any = shouldUseAdminUsersApi()
+        ? await updateAdminUserApi({ user_id: uid, reset_password: true })
+        : await update({ data: { user_id: uid, reset_password: true } });
+      const pwd = res?.password;
       if (pwd) {
         navigator.clipboard?.writeText(pwd);
         toast.success(`Nouveau mot de passe : ${pwd} (copié)`);
       }
-    } catch (e: any) { toast.error(e?.message ?? "Erreur"); }
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Réinitialisation : ${details.slice(0, 200)}`);
+    }
   }
 
   async function handleDelete(uid: string) {
     if (!confirm("Supprimer définitivement cet utilisateur ?")) return;
-    try { await remove({ data: { user_id: uid } }); toast.success("Supprimé"); load(); }
-    catch (e: any) { toast.error(e?.message ?? "Erreur"); }
+    setDebugError(null);
+    try {
+      if (shouldUseAdminUsersApi()) await deleteAdminUserApi({ user_id: uid });
+      else await remove({ data: { user_id: uid } });
+      toast.success("Supprimé");
+      load();
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Suppression : ${details.slice(0, 200)}`);
+    }
   }
 
   const roles = form.portal === "mugec" ? MUGEC_ROLES : MIPROJET_ROLES;
@@ -132,9 +182,15 @@ function MiprojetUsers() {
               <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Administrateurs des deux portails</CardTitle>
               <CardDescription>Créer / révoquer les admins MUGEC-CI et MIPROJET. Réservé au super administrateur.</CardDescription>
             </div>
-            <Button onClick={() => { setGeneratedPwd(null); setDialogOpen(true); }}><UserPlus className="mr-2 h-4 w-4"/> Nouveau compte</Button>
+            <Button onClick={() => { setGeneratedPwd(null); setDebugError(null); setDialogOpen(true); }}><UserPlus className="mr-2 h-4 w-4"/> Nouveau compte</Button>
           </CardHeader>
           <CardContent>
+            {debugError && (
+              <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="font-semibold">Erreur technique détectée</div>
+                <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">{debugError}</pre>
+              </div>
+            )}
             {loading ? <div className="py-8 text-center text-muted-foreground">Chargement…</div> : (
               <Table>
                 <TableHeader>
@@ -174,12 +230,19 @@ function MiprojetUsers() {
         </Card>
       </main>
 
-      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setGeneratedPwd(null); }}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setGeneratedPwd(null); setDebugError(null); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary"/> Créer un compte administrateur</DialogTitle>
-            <DialogDescription>Le mot de passe par défaut est appliqué si vous le laissez vide.</DialogDescription>
+            <DialogDescription>Le mot de passe est généré aléatoirement si vous laissez le champ vide.</DialogDescription>
           </DialogHeader>
+
+          {debugError && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="font-semibold">Erreur technique détectée</div>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">{debugError}</pre>
+            </div>
+          )}
 
           {generatedPwd ? (
             <div className="space-y-4">
@@ -216,7 +279,7 @@ function MiprojetUsers() {
                 <div><Label>Téléphone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+225…" /></div>
               </div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div><Label>Mot de passe (vide = aléatoire sécurisé envoyé à l'utilisateur)</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" /></div>
+              <div><Label>Mot de passe (vide = aléatoire sécurisé)</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" /></div>
 
               <div>
                 <Label>Envoyer l'invitation par</Label>
