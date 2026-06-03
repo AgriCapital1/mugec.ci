@@ -5,7 +5,7 @@
   "outputDirectory": "dist/client",
   "framework": null,
   "rewrites": [
-    { "source": "/((?!api/.*).*)", "destination": "/_shell.html" }
+    { "source": "/((?!api/.*|assets/.*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
