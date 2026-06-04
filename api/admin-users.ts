@@ -73,7 +73,7 @@ async function assertSuperAdmin(token: string) {
   const client = authed(token);
   const { data: userRes, error: userError } = await client.auth.getUser(token);
   if (userError || !userRes.user) throw new Error("Session invalide ou expirée.");
-  const { data, error } = await admin()
+  const { data, error } = await client
     .from("user_roles")
     .select("role")
     .eq("user_id", userRes.user.id)
@@ -89,7 +89,8 @@ function generatePassword() {
 }
 
 async function listAdminUsers() {
-  const db = admin();
+  const db = adminMaybe();
+  if (!db) return { users: [], limited: true };
   const { data: roles, error } = await db
     .from("user_roles")
     .select("user_id, role, created_at");
