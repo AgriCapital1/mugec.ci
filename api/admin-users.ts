@@ -1,12 +1,7 @@
-// Endpoint Vercel Serverless dédié à la gestion des administrateurs
-// (création, liste, mise à jour de rôle, réinitialisation mot de passe,
-// suppression). Ces opérations passent par `auth.admin.*` de Supabase et
-// EXIGENT donc la clé service_role côté serveur.
-//
-// Variables d'environnement requises sur Vercel :
-//   - VITE_SUPABASE_URL (ou SUPABASE_URL)
-//   - VITE_SUPABASE_PUBLISHABLE_KEY (ou SUPABASE_PUBLISHABLE_KEY)
-//   - SUPABASE_SERVICE_ROLE_KEY  ← obligatoire pour cet endpoint
+// Endpoint Vercel Serverless dédié à la gestion des administrateurs.
+// Il fonctionne même sans SUPABASE_SERVICE_ROLE_KEY pour la création de
+// comptes : dans ce cas il utilise l'inscription Supabase publique, puis le
+// super_admin connecté assigne les rôles via RLS.
 //
 // Optionnels (envoi de l'invitation) :
 //   - BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME
@@ -25,33 +20,51 @@ const MUGEC_ROLES = [
 ] as const;
 
 const env = (name: string) => process.env[name] || "";
-const SUPABASE_URL = env("SUPABASE_URL") || env("VITE_SUPABASE_URL");
-const PUBLISHABLE_KEY = env("SUPABASE_PUBLISHABLE_KEY") || env("VITE_SUPABASE_PUBLISHABLE_KEY");
+const DEFAULT_SUPABASE_URL = "https://bjgpipxmafzxqqkwaiwq.supabase.co";
+const DEFAULT_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqZ3BpcHhtYWZ6eHFxa3dhaXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjAzMjUsImV4cCI6MjA5NDc5NjMyNX0.R0aa8YP5HTO_BPlt0OE9GdC5jzVffs3qzF3Tn8TIFGk";
+const SUPABASE_URL = env("SUPABASE_URL") || env("VITE_SUPABASE_URL") || DEFAULT_SUPABASE_URL;
+const PUBLISHABLE_KEY = env("SUPABASE_PUBLISHABLE_KEY") || env("VITE_SUPABASE_PUBLISHABLE_KEY") || DEFAULT_PUBLISHABLE_KEY;
 const SERVICE_KEY = env("SUPABASE_SERVICE_ROLE_KEY") || env("SERVICE_ROLE_KEY");
 
-function requireConfig() {
+function requirePublicConfig() {
   const missing: string[] = [];
   if (!SUPABASE_URL) missing.push("VITE_SUPABASE_URL");
   if (!PUBLISHABLE_KEY) missing.push("VITE_SUPABASE_PUBLISHABLE_KEY");
-  if (!SERVICE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (missing.length) {
     throw new Error(
-      `Variables manquantes sur Vercel : ${missing.join(", ")}. Ouvrez Vercel → Settings → Environment Variables, ajoutez-les puis redéployez.`,
+      `Configuration Supabase publique introuvable : ${missing.join(", ")}.`,
     );
   }
 }
 
+function requireServiceConfig() {
+  requirePublicConfig();
+  if (!SERVICE_KEY) throw new Error("Action impossible sans clé serveur Supabase : utilisez la création de compte ou révoquez les rôles.");
+}
+
 function admin() {
-  requireConfig();
+  requireServiceConfig();
   return createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
+function adminMaybe() {
+  if (!SERVICE_KEY) return null;
+  return admin();
+}
+
 function authed(token: string) {
-  requireConfig();
+  requirePublicConfig();
   return createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+function signupClient() {
+  requirePublicConfig();
+  return createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -60,7 +73,7 @@ async function assertSuperAdmin(token: string) {
   const client = authed(token);
   const { data: userRes, error: userError } = await client.auth.getUser(token);
   if (userError || !userRes.user) throw new Error("Session invalide ou expirée.");
-  const { data, error } = await admin()
+  const { data, error } = await client
     .from("user_roles")
     .select("role")
     .eq("user_id", userRes.user.id)
@@ -76,7 +89,8 @@ function generatePassword() {
 }
 
 async function listAdminUsers() {
-  const db = admin();
+  const db = adminMaybe();
+  if (!db) return { users: [], limited: true };
   const { data: roles, error } = await db
     .from("user_roles")
     .select("user_id, role, created_at");
@@ -119,7 +133,7 @@ const createSchema = z.object({
   password: z.string().min(6).max(60).optional(),
 });
 
-async function createAdminUser(input: unknown, actorId: string) {
+async function createAdminUser(input: unknown, actorId: string, token: string) {
   const data = createSchema.parse(input);
   let roleToInsert: string;
   if (data.portal === "mugec") {
@@ -130,38 +144,55 @@ async function createAdminUser(input: unknown, actorId: string) {
     roleToInsert = data.role;
   }
 
-  const db = admin();
+  const db = adminMaybe();
+  const userDb = authed(token);
   const password = data.password || generatePassword();
   let userId: string | null = null;
-  const { data: created, error: createErr } = await db.auth.admin.createUser({
-    email: data.email,
-    phone: data.phone || undefined,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: data.full_name, created_by_super_admin: true },
-  });
-  if (createErr) {
-    const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const existing = list?.users?.find((u: any) => u.email?.toLowerCase() === data.email.toLowerCase());
-    if (!existing) throw new Error(`Création refusée : ${createErr.message}`);
-    userId = existing.id;
+  if (db) {
+    const { data: created, error: createErr } = await db.auth.admin.createUser({
+      email: data.email,
+      phone: data.phone || undefined,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: data.full_name, created_by_super_admin: true },
+    });
+    if (createErr) {
+      const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 200 });
+      const existing = list?.users?.find((u: any) => u.email?.toLowerCase() === data.email.toLowerCase());
+      if (!existing) throw new Error(`Création refusée : ${createErr.message}`);
+      userId = existing.id;
+    } else {
+      userId = created.user?.id ?? null;
+    }
   } else {
-    userId = created.user?.id ?? null;
+    const { data: signed, error: signErr } = await signupClient().auth.signUp({
+      email: data.email,
+      password,
+      phone: data.phone || undefined,
+      options: {
+        data: { full_name: data.full_name, created_by_super_admin: true },
+        emailRedirectTo: `${env("PUBLIC_APP_URL") || "https://mugecci.ivoireprojet.com"}${data.portal === "miprojet" ? "/miprojet" : "/admin"}`,
+      },
+    });
+    if (signErr) throw new Error(`Création refusée : ${signErr.message}`);
+    userId = signed.user?.id ?? null;
   }
   if (!userId) throw new Error("Impossible de créer l'utilisateur.");
 
-  await db
+  const roleWrite = await userDb
     .from("user_roles")
     .upsert({ user_id: userId, role: roleToInsert as any }, { onConflict: "user_id,role", ignoreDuplicates: true });
+  if (roleWrite.error) throw new Error(`Rôle non assigné : ${roleWrite.error.message}`);
 
-  await db.from("user_security").upsert({
+  const securityWrite = await userDb.from("user_security").upsert({
     user_id: userId,
     must_change_password: true,
     password_changed_at: null,
     updated_at: new Date().toISOString(),
   });
+  if (securityWrite.error) throw new Error(`Sécurité compte non enregistrée : ${securityWrite.error.message}`);
 
-  await db.from("admin_user_directory").upsert({
+  const directoryWrite = await userDb.from("admin_user_directory").upsert({
     user_id: userId,
     email: data.email,
     phone: data.phone || null,
@@ -169,8 +200,9 @@ async function createAdminUser(input: unknown, actorId: string) {
     portal: data.portal,
     created_by: actorId,
   }, { onConflict: "user_id" });
+  if (directoryWrite.error) throw new Error(`Annuaire admin non enregistré : ${directoryWrite.error.message}`);
 
-  await db.from("admin_invitations").insert({
+  const invitationWrite = await userDb.from("admin_invitations").insert({
     target_user_id: userId,
     target_email: data.email,
     target_phone: data.phone || null,
@@ -180,6 +212,7 @@ async function createAdminUser(input: unknown, actorId: string) {
     channel: data.send_via,
     status: "created",
   });
+  if (invitationWrite.error) throw new Error(`Invitation non enregistrée : ${invitationWrite.error.message}`);
 
   const portalLabel = data.portal === "miprojet" ? "MIPROJET" : "MUGEC-CI";
   const portalUrl = data.portal === "miprojet" ? "/miprojet" : "/admin";
@@ -234,18 +267,23 @@ async function createAdminUser(input: unknown, actorId: string) {
   };
 }
 
-async function updateAdminUser(input: unknown) {
+async function updateAdminUser(input: unknown, token: string) {
   const data = z.object({
     user_id: z.string().uuid(),
     new_role: z.string().min(2).max(80).optional(),
     reset_password: z.boolean().optional(),
   }).parse(input);
-  const db = admin();
+  const db = adminMaybe();
+  const userDb = authed(token);
   if (data.new_role) {
-    await db.from("user_roles").delete().eq("user_id", data.user_id).neq("role", "membre");
-    await db.from("user_roles").insert({ user_id: data.user_id, role: data.new_role as any });
+    const writer = db ?? userDb;
+    const removed = await writer.from("user_roles").delete().eq("user_id", data.user_id).neq("role", "membre");
+    if (removed.error) throw new Error(`Rôles non révoqués : ${removed.error.message}`);
+    const inserted = await writer.from("user_roles").insert({ user_id: data.user_id, role: data.new_role as any });
+    if (inserted.error) throw new Error(`Nouveau rôle non assigné : ${inserted.error.message}`);
   }
   if (data.reset_password) {
+    if (!db) throw new Error("Réinitialisation du mot de passe indisponible sans clé serveur Supabase. Créez un nouveau mot de passe depuis le flux de récupération Supabase.");
     const newPwd = generatePassword();
     const { error } = await db.auth.admin.updateUserById(data.user_id, { password: newPwd });
     if (error) throw new Error(error.message);
@@ -260,13 +298,21 @@ async function updateAdminUser(input: unknown) {
   return { ok: true };
 }
 
-async function deleteAdminUser(input: unknown, actorId: string) {
+async function deleteAdminUser(input: unknown, actorId: string, token: string) {
   const data = z.object({ user_id: z.string().uuid() }).parse(input);
   if (data.user_id === actorId) throw new Error("Vous ne pouvez pas supprimer votre propre compte.");
-  const db = admin();
-  const { error } = await db.auth.admin.deleteUser(data.user_id);
-  if (error) throw new Error(error.message);
-  await db.from("admin_user_directory").delete().eq("user_id", data.user_id);
+  const db = adminMaybe();
+  const userDb = authed(token);
+  if (db) {
+    const { error } = await db.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+    await db.from("admin_user_directory").delete().eq("user_id", data.user_id);
+  } else {
+    const roles = await userDb.from("user_roles").delete().eq("user_id", data.user_id).neq("role", "membre");
+    if (roles.error) throw new Error(`Révocation des rôles refusée : ${roles.error.message}`);
+    const directory = await userDb.from("admin_user_directory").delete().eq("user_id", data.user_id);
+    if (directory.error) throw new Error(`Retrait annuaire refusé : ${directory.error.message}`);
+  }
   return { ok: true };
 }
 
@@ -283,9 +329,9 @@ export default async function handler(request: any, response: any) {
     const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
     const { action, data } = z.object({ action: z.string(), data: z.unknown().optional() }).parse(body);
     const result = action === "list" ? await listAdminUsers()
-      : action === "create" ? await createAdminUser(data, actorId)
-      : action === "update" ? await updateAdminUser(data)
-      : action === "delete" ? await deleteAdminUser(data, actorId)
+      : action === "create" ? await createAdminUser(data, actorId, token)
+      : action === "update" ? await updateAdminUser(data, token)
+      : action === "delete" ? await deleteAdminUser(data, actorId, token)
       : null;
     if (!result) return response.status(400).json({ error: `Action inconnue: ${action}` });
     return response.status(200).json({ result });
