@@ -1,12 +1,7 @@
-// Endpoint Vercel Serverless dédié à la gestion des administrateurs
-// (création, liste, mise à jour de rôle, réinitialisation mot de passe,
-// suppression). Ces opérations passent par `auth.admin.*` de Supabase et
-// EXIGENT donc la clé service_role côté serveur.
-//
-// Variables d'environnement requises sur Vercel :
-//   - VITE_SUPABASE_URL (ou SUPABASE_URL)
-//   - VITE_SUPABASE_PUBLISHABLE_KEY (ou SUPABASE_PUBLISHABLE_KEY)
-//   - SUPABASE_SERVICE_ROLE_KEY  ← obligatoire pour cet endpoint
+// Endpoint Vercel Serverless dédié à la gestion des administrateurs.
+// Il fonctionne même sans SUPABASE_SERVICE_ROLE_KEY pour la création de
+// comptes : dans ce cas il utilise l'inscription Supabase publique, puis le
+// super_admin connecté assigne les rôles via RLS.
 //
 // Optionnels (envoi de l'invitation) :
 //   - BREVO_API_KEY, BREVO_SENDER_EMAIL, BREVO_SENDER_NAME
@@ -25,33 +20,51 @@ const MUGEC_ROLES = [
 ] as const;
 
 const env = (name: string) => process.env[name] || "";
-const SUPABASE_URL = env("SUPABASE_URL") || env("VITE_SUPABASE_URL");
-const PUBLISHABLE_KEY = env("SUPABASE_PUBLISHABLE_KEY") || env("VITE_SUPABASE_PUBLISHABLE_KEY");
+const DEFAULT_SUPABASE_URL = "https://bjgpipxmafzxqqkwaiwq.supabase.co";
+const DEFAULT_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqZ3BpcHhtYWZ6eHFxa3dhaXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjAzMjUsImV4cCI6MjA5NDc5NjMyNX0.R0aa8YP5HTO_BPlt0OE9GdC5jzVffs3qzF3Tn8TIFGk";
+const SUPABASE_URL = env("SUPABASE_URL") || env("VITE_SUPABASE_URL") || DEFAULT_SUPABASE_URL;
+const PUBLISHABLE_KEY = env("SUPABASE_PUBLISHABLE_KEY") || env("VITE_SUPABASE_PUBLISHABLE_KEY") || DEFAULT_PUBLISHABLE_KEY;
 const SERVICE_KEY = env("SUPABASE_SERVICE_ROLE_KEY") || env("SERVICE_ROLE_KEY");
 
-function requireConfig() {
+function requirePublicConfig() {
   const missing: string[] = [];
   if (!SUPABASE_URL) missing.push("VITE_SUPABASE_URL");
   if (!PUBLISHABLE_KEY) missing.push("VITE_SUPABASE_PUBLISHABLE_KEY");
-  if (!SERVICE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (missing.length) {
     throw new Error(
-      `Variables manquantes sur Vercel : ${missing.join(", ")}. Ouvrez Vercel → Settings → Environment Variables, ajoutez-les puis redéployez.`,
+      `Configuration Supabase publique introuvable : ${missing.join(", ")}.`,
     );
   }
 }
 
+function requireServiceConfig() {
+  requirePublicConfig();
+  if (!SERVICE_KEY) throw new Error("Action impossible sans clé serveur Supabase : utilisez la création de compte ou révoquez les rôles.");
+}
+
 function admin() {
-  requireConfig();
+  requireServiceConfig();
   return createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
+function adminMaybe() {
+  if (!SERVICE_KEY) return null;
+  return admin();
+}
+
 function authed(token: string) {
-  requireConfig();
+  requirePublicConfig();
   return createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+function signupClient() {
+  requirePublicConfig();
+  return createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
