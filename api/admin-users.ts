@@ -267,18 +267,23 @@ async function createAdminUser(input: unknown, actorId: string, token: string) {
   };
 }
 
-async function updateAdminUser(input: unknown) {
+async function updateAdminUser(input: unknown, token: string) {
   const data = z.object({
     user_id: z.string().uuid(),
     new_role: z.string().min(2).max(80).optional(),
     reset_password: z.boolean().optional(),
   }).parse(input);
-  const db = admin();
+  const db = adminMaybe();
+  const userDb = authed(token);
   if (data.new_role) {
-    await db.from("user_roles").delete().eq("user_id", data.user_id).neq("role", "membre");
-    await db.from("user_roles").insert({ user_id: data.user_id, role: data.new_role as any });
+    const writer = db ?? userDb;
+    const removed = await writer.from("user_roles").delete().eq("user_id", data.user_id).neq("role", "membre");
+    if (removed.error) throw new Error(`Rôles non révoqués : ${removed.error.message}`);
+    const inserted = await writer.from("user_roles").insert({ user_id: data.user_id, role: data.new_role as any });
+    if (inserted.error) throw new Error(`Nouveau rôle non assigné : ${inserted.error.message}`);
   }
   if (data.reset_password) {
+    if (!db) throw new Error("Réinitialisation du mot de passe indisponible sans clé serveur Supabase. Créez un nouveau mot de passe depuis le flux de récupération Supabase.");
     const newPwd = generatePassword();
     const { error } = await db.auth.admin.updateUserById(data.user_id, { password: newPwd });
     if (error) throw new Error(error.message);
@@ -293,13 +298,21 @@ async function updateAdminUser(input: unknown) {
   return { ok: true };
 }
 
-async function deleteAdminUser(input: unknown, actorId: string) {
+async function deleteAdminUser(input: unknown, actorId: string, token: string) {
   const data = z.object({ user_id: z.string().uuid() }).parse(input);
   if (data.user_id === actorId) throw new Error("Vous ne pouvez pas supprimer votre propre compte.");
-  const db = admin();
-  const { error } = await db.auth.admin.deleteUser(data.user_id);
-  if (error) throw new Error(error.message);
-  await db.from("admin_user_directory").delete().eq("user_id", data.user_id);
+  const db = adminMaybe();
+  const userDb = authed(token);
+  if (db) {
+    const { error } = await db.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+    await db.from("admin_user_directory").delete().eq("user_id", data.user_id);
+  } else {
+    const roles = await userDb.from("user_roles").delete().eq("user_id", data.user_id).neq("role", "membre");
+    if (roles.error) throw new Error(`Révocation des rôles refusée : ${roles.error.message}`);
+    const directory = await userDb.from("admin_user_directory").delete().eq("user_id", data.user_id);
+    if (directory.error) throw new Error(`Retrait annuaire refusé : ${directory.error.message}`);
+  }
   return { ok: true };
 }
 
@@ -316,9 +329,9 @@ export default async function handler(request: any, response: any) {
     const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
     const { action, data } = z.object({ action: z.string(), data: z.unknown().optional() }).parse(body);
     const result = action === "list" ? await listAdminUsers()
-      : action === "create" ? await createAdminUser(data, actorId)
-      : action === "update" ? await updateAdminUser(data)
-      : action === "delete" ? await deleteAdminUser(data, actorId)
+      : action === "create" ? await createAdminUser(data, actorId, token)
+      : action === "update" ? await updateAdminUser(data, token)
+      : action === "delete" ? await deleteAdminUser(data, actorId, token)
       : null;
     if (!result) return response.status(400).json({ error: `Action inconnue: ${action}` });
     return response.status(200).json({ result });
