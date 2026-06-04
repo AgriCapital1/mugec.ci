@@ -4,9 +4,9 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // Cloudflare Workers et on construit un SPA pur. Le runtime serveur
 // Cloudflare reste utilisé pour le déploiement Lovable / Cloudflare.
 //
-// Important : on force la "shell page" SPA à être écrite directement
-// dans `dist/client/index.html` (outputPath '/'), pour que Vercel puisse
-// servir `index.html` comme fallback de TOUTES les routes côté client.
+// Important : TanStack Start écrit le shell SPA sous `${outputPath}.html`.
+// Donc `outputPath: "/index"` produit exactement `dist/client/index.html`,
+// que Vercel peut servir comme fallback de TOUTES les routes côté client.
 const isVercel = !!process.env.VERCEL;
 
 export default defineConfig({
@@ -17,7 +17,7 @@ export default defineConfig({
       ? {
           enabled: true,
           maskPath: "/",
-          prerender: { outputPath: "/" },
+          prerender: { outputPath: "/index" },
         }
       : undefined,
   },
