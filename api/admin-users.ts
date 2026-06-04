@@ -184,14 +184,15 @@ async function createAdminUser(input: unknown, actorId: string, token: string) {
     .upsert({ user_id: userId, role: roleToInsert as any }, { onConflict: "user_id,role", ignoreDuplicates: true });
   if (roleWrite.error) throw new Error(`Rôle non assigné : ${roleWrite.error.message}`);
 
-  await userDb.from("user_security").upsert({
+  const securityWrite = await userDb.from("user_security").upsert({
     user_id: userId,
     must_change_password: true,
     password_changed_at: null,
     updated_at: new Date().toISOString(),
   });
+  if (securityWrite.error) throw new Error(`Sécurité compte non enregistrée : ${securityWrite.error.message}`);
 
-  await userDb.from("admin_user_directory").upsert({
+  const directoryWrite = await userDb.from("admin_user_directory").upsert({
     user_id: userId,
     email: data.email,
     phone: data.phone || null,
@@ -199,8 +200,9 @@ async function createAdminUser(input: unknown, actorId: string, token: string) {
     portal: data.portal,
     created_by: actorId,
   }, { onConflict: "user_id" });
+  if (directoryWrite.error) throw new Error(`Annuaire admin non enregistré : ${directoryWrite.error.message}`);
 
-  await userDb.from("admin_invitations").insert({
+  const invitationWrite = await userDb.from("admin_invitations").insert({
     target_user_id: userId,
     target_email: data.email,
     target_phone: data.phone || null,
@@ -210,6 +212,7 @@ async function createAdminUser(input: unknown, actorId: string, token: string) {
     channel: data.send_via,
     status: "created",
   });
+  if (invitationWrite.error) throw new Error(`Invitation non enregistrée : ${invitationWrite.error.message}`);
 
   const portalLabel = data.portal === "miprojet" ? "MIPROJET" : "MUGEC-CI";
   const portalUrl = data.portal === "miprojet" ? "/miprojet" : "/admin";
