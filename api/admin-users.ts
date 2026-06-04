@@ -133,7 +133,7 @@ const createSchema = z.object({
   password: z.string().min(6).max(60).optional(),
 });
 
-async function createAdminUser(input: unknown, actorId: string) {
+async function createAdminUser(input: unknown, actorId: string, token: string) {
   const data = createSchema.parse(input);
   let roleToInsert: string;
   if (data.portal === "mugec") {
@@ -144,38 +144,54 @@ async function createAdminUser(input: unknown, actorId: string) {
     roleToInsert = data.role;
   }
 
-  const db = admin();
+  const db = adminMaybe();
+  const userDb = authed(token);
   const password = data.password || generatePassword();
   let userId: string | null = null;
-  const { data: created, error: createErr } = await db.auth.admin.createUser({
-    email: data.email,
-    phone: data.phone || undefined,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: data.full_name, created_by_super_admin: true },
-  });
-  if (createErr) {
-    const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const existing = list?.users?.find((u: any) => u.email?.toLowerCase() === data.email.toLowerCase());
-    if (!existing) throw new Error(`Création refusée : ${createErr.message}`);
-    userId = existing.id;
+  if (db) {
+    const { data: created, error: createErr } = await db.auth.admin.createUser({
+      email: data.email,
+      phone: data.phone || undefined,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: data.full_name, created_by_super_admin: true },
+    });
+    if (createErr) {
+      const { data: list } = await db.auth.admin.listUsers({ page: 1, perPage: 200 });
+      const existing = list?.users?.find((u: any) => u.email?.toLowerCase() === data.email.toLowerCase());
+      if (!existing) throw new Error(`Création refusée : ${createErr.message}`);
+      userId = existing.id;
+    } else {
+      userId = created.user?.id ?? null;
+    }
   } else {
-    userId = created.user?.id ?? null;
+    const { data: signed, error: signErr } = await signupClient().auth.signUp({
+      email: data.email,
+      password,
+      phone: data.phone || undefined,
+      options: {
+        data: { full_name: data.full_name, created_by_super_admin: true },
+        emailRedirectTo: `${env("PUBLIC_APP_URL") || "https://mugecci.ivoireprojet.com"}${data.portal === "miprojet" ? "/miprojet" : "/admin"}`,
+      },
+    });
+    if (signErr) throw new Error(`Création refusée : ${signErr.message}`);
+    userId = signed.user?.id ?? null;
   }
   if (!userId) throw new Error("Impossible de créer l'utilisateur.");
 
-  await db
+  const roleWrite = await userDb
     .from("user_roles")
     .upsert({ user_id: userId, role: roleToInsert as any }, { onConflict: "user_id,role", ignoreDuplicates: true });
+  if (roleWrite.error) throw new Error(`Rôle non assigné : ${roleWrite.error.message}`);
 
-  await db.from("user_security").upsert({
+  await userDb.from("user_security").upsert({
     user_id: userId,
     must_change_password: true,
     password_changed_at: null,
     updated_at: new Date().toISOString(),
   });
 
-  await db.from("admin_user_directory").upsert({
+  await userDb.from("admin_user_directory").upsert({
     user_id: userId,
     email: data.email,
     phone: data.phone || null,
@@ -184,7 +200,7 @@ async function createAdminUser(input: unknown, actorId: string) {
     created_by: actorId,
   }, { onConflict: "user_id" });
 
-  await db.from("admin_invitations").insert({
+  await userDb.from("admin_invitations").insert({
     target_user_id: userId,
     target_email: data.email,
     target_phone: data.phone || null,
