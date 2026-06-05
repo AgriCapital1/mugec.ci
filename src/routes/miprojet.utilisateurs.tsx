@@ -13,14 +13,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { listAdminUsers, createAdminUser, updateAdminUser, deleteAdminUser } from "@/lib/admin-users.functions";
 import {
-  shouldUseAdminUsersApi,
-  listAdminUsersApi,
-  createAdminUserApi,
-  updateAdminUserApi,
-  deleteAdminUserApi,
-} from "@/lib/admin-users-api";
+  listAdminUsersClient,
+  createAdminUserClient,
+  updateAdminUserRoleClient,
+  resetAdminPasswordClient,
+  deleteAdminUserClient,
+} from "@/lib/admin-users-client";
 import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy } from "lucide-react";
 
 export const Route = createFileRoute("/miprojet/utilisateurs")({ ssr: false, component: MiprojetUsers });
