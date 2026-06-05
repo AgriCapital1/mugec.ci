@@ -217,7 +217,7 @@ function MiprojetUsers() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString("fr-FR") : "—"}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => handleResetPwd(u.id)} title="Réinitialiser MDP"><KeyRound className="h-4 w-4"/></Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleResetPwd(u.id, u.email)} title="Envoyer un lien de réinitialisation"><KeyRound className="h-4 w-4"/></Button>
                         {!u.roles.includes("super_admin") && (
                           <Button size="sm" variant="ghost" onClick={() => handleDelete(u.id)} title="Supprimer"><Trash2 className="h-4 w-4 text-destructive"/></Button>
                         )}
