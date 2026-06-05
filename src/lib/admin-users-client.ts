@@ -39,7 +39,7 @@ export async function listAdminUsersClient() {
   ]);
   if (rolesErr) throw new Error(`Lecture des rôles : ${rolesErr.message}`);
 
-  const adminRoles = new Set(["super_admin", "miprojet_admin", "miprojet_viewer", ...Array.from(MUGEC_ROLES)]);
+  const adminRoles = new Set<string>(["super_admin", "miprojet_admin", "miprojet_viewer", ...Array.from(MUGEC_ROLES)]);
   const grouped = new Map<string, { id: string; roles: string[]; created_at: string }>();
   for (const r of roles ?? []) {
     if (!adminRoles.has(String(r.role))) continue;
