@@ -25,16 +25,17 @@ const SAFE_IMAGE_TYPES = new Set([
 
 const env = (name: string) => process.env[name] || "";
 
-const SUPABASE_URL = env("SUPABASE_URL") || env("VITE_SUPABASE_URL");
-const PUBLISHABLE_KEY = env("SUPABASE_PUBLISHABLE_KEY") || env("VITE_SUPABASE_PUBLISHABLE_KEY");
+// Fallbacks codés en dur (clés PUBLIQUES Supabase — sûres à exposer)
+// pour que l'IA fonctionne même sans variables Vercel configurées.
+const FALLBACK_SUPABASE_URL = "https://bjgpipxmafzxqqkwaiwq.supabase.co";
+const FALLBACK_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqZ3BpcHhtYWZ6eHFxa3dhaXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjAzMjUsImV4cCI6MjA5NDc5NjMyNX0.R0aa8YP5HTO_BPlt0OE9GdC5jzVffs3qzF3Tn8TIFGk";
+
+const SUPABASE_URL = env("SUPABASE_URL") || env("VITE_SUPABASE_URL") || FALLBACK_SUPABASE_URL;
+const PUBLISHABLE_KEY = env("SUPABASE_PUBLISHABLE_KEY") || env("VITE_SUPABASE_PUBLISHABLE_KEY") || FALLBACK_PUBLISHABLE_KEY;
 const SERVICE_KEY = env("SUPABASE_SERVICE_ROLE_KEY") || env("SERVICE_ROLE_KEY");
 
 function ensurePublicConfig() {
-  if (!SUPABASE_URL || !PUBLISHABLE_KEY) {
-    throw new Error(
-      "Configuration Supabase incomplète sur l'hébergeur : ajoutez VITE_SUPABASE_URL et VITE_SUPABASE_PUBLISHABLE_KEY dans les variables d'environnement.",
-    );
-  }
+  // Toujours OK : fallbacks publics codés en dur.
 }
 
 function authedClient(token: string) {
