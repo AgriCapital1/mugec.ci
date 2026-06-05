@@ -68,11 +68,6 @@ function MiprojetUsers() {
     password: "",
   });
 
-  const list = useServerFn(listAdminUsers);
-  const create = useServerFn(createAdminUser);
-  const update = useServerFn(updateAdminUser);
-  const remove = useServerFn(deleteAdminUser);
-
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -92,7 +87,7 @@ function MiprojetUsers() {
     setLoading(true);
     setDebugError(null);
     try {
-      const res = shouldUseAdminUsersApi() ? await listAdminUsersApi() : await list();
+      const res = await listAdminUsersClient();
       setUsers(res.users ?? []);
     } catch (e: any) {
       const details = readErrorDetails(e);
@@ -110,17 +105,17 @@ function MiprojetUsers() {
     setGeneratedPwd(null);
     setDebugError(null);
     try {
-      const payload = { ...form, phone: form.phone || undefined, password: form.password || undefined };
-      const res: any = shouldUseAdminUsersApi()
-        ? await createAdminUserApi(payload)
-        : await create({ data: payload });
-      const pwd = res?.initial_password || form.password || null;
-      setGeneratedPwd(pwd);
-      toast.success(
-        form.password
-          ? "Utilisateur créé. Communiquez le mot de passe à l'utilisateur."
-          : `Utilisateur créé. Mot de passe ${res?.password_delivered === "manual" ? "à transmettre manuellement" : `envoyé par ${res?.password_delivered}`}.`,
-      );
+      const res = await createAdminUserClient({
+        email: form.email,
+        phone: form.phone || undefined,
+        full_name: form.full_name,
+        portal: form.portal,
+        role: form.role,
+        password: form.password || undefined,
+        send_via: form.send_via,
+      });
+      setGeneratedPwd(res.initial_password);
+      toast.success("Utilisateur créé. Communiquez le mot de passe initial à l'utilisateur.");
       load();
     } catch (e: any) {
       const details = readErrorDetails(e);
@@ -131,18 +126,13 @@ function MiprojetUsers() {
     }
   }
 
-  async function handleResetPwd(uid: string) {
-    if (!confirm("Réinitialiser le mot de passe ?")) return;
+  async function handleResetPwd(uid: string, email: string | null) {
+    if (!email) { toast.error("Email manquant pour l'envoi du lien de réinitialisation."); return; }
+    if (!confirm(`Envoyer un lien de réinitialisation à ${email} ?`)) return;
     setDebugError(null);
     try {
-      const res: any = shouldUseAdminUsersApi()
-        ? await updateAdminUserApi({ user_id: uid, reset_password: true })
-        : await update({ data: { user_id: uid, reset_password: true } });
-      const pwd = res?.password;
-      if (pwd) {
-        navigator.clipboard?.writeText(pwd);
-        toast.success(`Nouveau mot de passe : ${pwd} (copié)`);
-      }
+      await resetAdminPasswordClient(email);
+      toast.success(`Lien de réinitialisation envoyé à ${email}.`);
     } catch (e: any) {
       const details = readErrorDetails(e);
       setDebugError(details);
@@ -150,13 +140,25 @@ function MiprojetUsers() {
     }
   }
 
-  async function handleDelete(uid: string) {
-    if (!confirm("Supprimer définitivement cet utilisateur ?")) return;
+  async function handleChangeRole(uid: string, newRole: string) {
     setDebugError(null);
     try {
-      if (shouldUseAdminUsersApi()) await deleteAdminUserApi({ user_id: uid });
-      else await remove({ data: { user_id: uid } });
-      toast.success("Supprimé");
+      await updateAdminUserRoleClient(uid, newRole);
+      toast.success("Rôle mis à jour");
+      load();
+    } catch (e: any) {
+      const details = readErrorDetails(e);
+      setDebugError(details);
+      toast.error(`Rôle : ${details.slice(0, 200)}`);
+    }
+  }
+
+  async function handleDelete(uid: string) {
+    if (!confirm("Retirer les accès administrateurs de cet utilisateur ?")) return;
+    setDebugError(null);
+    try {
+      await deleteAdminUserClient(uid);
+      toast.success("Accès révoqués");
       load();
     } catch (e: any) {
       const details = readErrorDetails(e);
