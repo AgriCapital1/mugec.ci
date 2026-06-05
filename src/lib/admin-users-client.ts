@@ -43,7 +43,7 @@ export async function listAdminUsersClient() {
   const grouped = new Map<string, { id: string; roles: string[]; created_at: string }>();
   for (const r of roles ?? []) {
     if (!adminRoles.has(String(r.role))) continue;
-    const cur = grouped.get(r.user_id) ?? { id: r.user_id, roles: [], created_at: r.created_at };
+    const cur = grouped.get(r.user_id) ?? { id: r.user_id, roles: [] as string[], created_at: r.created_at };
     cur.roles.push(String(r.role));
     grouped.set(r.user_id, cur);
   }
