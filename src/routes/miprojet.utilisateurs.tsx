@@ -304,7 +304,10 @@ function MiprojetUsers() {
                 <div><Label>Téléphone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+225…" /></div>
               </div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div><Label>Mot de passe (vide = aléatoire sécurisé)</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" /></div>
+              <div>
+                <Label htmlFor="new-pwd">Mot de passe (vide = aléatoire sécurisé)</Label>
+                <PasswordInput id="new-pwd" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" autoComplete="new-password" />
+              </div>
 
               <div>
                 <Label>Envoyer l'invitation par</Label>
