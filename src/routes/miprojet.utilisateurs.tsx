@@ -188,7 +188,14 @@ function MiprojetUsers() {
               <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Administrateurs des deux portails</CardTitle>
               <CardDescription>Créer / révoquer les admins MUGEC-CI et MIPROJET. Réservé au super administrateur.</CardDescription>
             </div>
-            <Button onClick={() => { setGeneratedPwd(null); setDebugError(null); setDialogOpen(true); }}><UserPlus className="mr-2 h-4 w-4"/> Nouveau compte</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setPermOpen(true)}>
+                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" /> Permissions par rôle
+              </Button>
+              <Button onClick={() => { setGeneratedPwd(null); setDebugError(null); setDialogOpen(true); }}>
+                <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" /> Nouveau compte
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {debugError && (
