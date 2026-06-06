@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { loginClientSide } from "@/lib/client-login";
@@ -24,6 +24,8 @@ function MiprojetGate() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isChildRoute = pathname !== "/miprojet" && pathname !== "/miprojet/";
 
   useEffect(() => {
     let alive = true;
@@ -80,7 +82,7 @@ function MiprojetGate() {
           </div>
         }
       >
-        <MiProjetDashboard />
+        {isChildRoute ? <Outlet /> : <MiProjetDashboard />}
       </Suspense>
     );
 
