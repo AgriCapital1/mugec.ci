@@ -82,7 +82,7 @@ function MiprojetGate() {
           </div>
         }
       >
-        <MiProjetDashboard />
+        {isChildRoute ? <Outlet /> : <MiProjetDashboard />}
       </Suspense>
     );
 
