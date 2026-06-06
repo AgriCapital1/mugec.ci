@@ -64,7 +64,7 @@ export function DashboardHeader({
             <div className="text-sm font-semibold truncate">{title}</div>
           </div>
         </div>
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Navigation principale">
           {nav.map((n) => {
             if (n.children?.length) {
               const active = groupActive(n);
@@ -74,10 +74,12 @@ export function DashboardHeader({
                     <Button
                       variant={active ? "default" : "ghost"}
                       size="sm"
-                      className="gap-1"
+                      className="gap-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      aria-current={active ? "page" : undefined}
+                      aria-haspopup="menu"
                     >
                       {n.label}
-                      <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                      <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
@@ -85,7 +87,11 @@ export function DashboardHeader({
                     <DropdownMenuSeparator />
                     {n.children.map((c) => (
                       <DropdownMenuItem key={c.to} asChild>
-                        <Link to={c.to} className={loc.pathname === c.to ? "font-semibold text-primary" : ""}>
+                        <Link
+                          to={c.to}
+                          aria-current={loc.pathname === c.to ? "page" : undefined}
+                          className={loc.pathname === c.to ? "font-semibold text-primary" : ""}
+                        >
                           {c.label}
                         </Link>
                       </DropdownMenuItem>
@@ -99,7 +105,8 @@ export function DashboardHeader({
               <Link
                 key={n.to}
                 to={n.to!}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                aria-current={active ? "page" : undefined}
+                className={`rounded-md px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground/80 hover:bg-secondary hover:text-primary"
@@ -110,6 +117,7 @@ export function DashboardHeader({
             );
           })}
         </nav>
+
         <div className="flex items-center gap-2">
           {isSuper && (
             <Button asChild variant="outline" size="sm" className="hidden md:inline-flex" title="Basculer entre portails">
