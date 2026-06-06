@@ -97,34 +97,49 @@ export type Database = {
       }
       admin_user_directory: {
         Row: {
+          address: string | null
           created_at: string
           created_by: string | null
           email: string
+          first_name: string | null
           full_name: string
           id: string
+          last_name: string | null
+          notes: string | null
           phone: string | null
+          photo_url: string | null
           portal: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          address?: string | null
           created_at?: string
           created_by?: string | null
           email: string
+          first_name?: string | null
           full_name: string
           id?: string
+          last_name?: string | null
+          notes?: string | null
           phone?: string | null
+          photo_url?: string | null
           portal: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          address?: string | null
           created_at?: string
           created_by?: string | null
           email?: string
+          first_name?: string | null
           full_name?: string
           id?: string
+          last_name?: string | null
+          notes?: string | null
           phone?: string | null
+          photo_url?: string | null
           portal?: string
           updated_at?: string
           user_id?: string
@@ -1101,6 +1116,33 @@ export type Database = {
           },
         ]
       }
+      permission_catalog: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          key: string
+          label: string
+          portal: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          key: string
+          label: string
+          portal?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          key?: string
+          label?: string
+          portal?: string
+        }
+        Relationships: []
+      }
       prestation_attachments: {
         Row: {
           category: string
@@ -1341,6 +1383,41 @@ export type Database = {
           uploaded_documents?: Json
         }
         Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          allowed: boolean
+          id: string
+          permission_key: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          allowed?: boolean
+          id?: string
+          permission_key: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          allowed?: boolean
+          id?: string
+          permission_key?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_key_fkey"
+            columns: ["permission_key"]
+            isOneToOne: false
+            referencedRelation: "permission_catalog"
+            referencedColumns: ["key"]
+          },
+        ]
       }
       sensitive_audit_log: {
         Row: {
@@ -1642,6 +1719,14 @@ export type Database = {
       open_member_rights_after_90_days: { Args: never; Returns: number }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
       role_for_prestation_step: { Args: { _step: number }; Returns: string }
+      role_has_permission: {
+        Args: { _key: string; _role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
+      }
+      user_has_permission: {
+        Args: { _key: string; _user_id: string }
+        Returns: boolean
+      }
       validate_prestation_step: {
         Args: { _action: string; _motif?: string; _request_id: string }
         Returns: {

@@ -19,7 +19,6 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 function isolatedClient() {
-  // Client sans persistence pour ne pas écraser la session du super_admin.
   return createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
   });
@@ -35,7 +34,7 @@ export async function listAdminUsersClient() {
   const db: any = supabase;
   const [{ data: roles, error: rolesErr }, { data: directory }] = await Promise.all([
     db.from("user_roles").select("user_id, role, created_at"),
-    db.from("admin_user_directory").select("user_id, email, phone, full_name, portal, created_at"),
+    db.from("admin_user_directory").select("user_id, email, phone, full_name, first_name, last_name, address, photo_url, notes, portal, created_at"),
   ]);
   if (rolesErr) throw new Error(`Lecture des rôles : ${rolesErr.message}`);
 
@@ -51,16 +50,24 @@ export async function listAdminUsersClient() {
   for (const d of directory ?? []) directoryMap.set(d.user_id, d);
 
   return {
-    users: Array.from(grouped.values()).map((g) => ({
-      id: g.id,
-      email: directoryMap.get(g.id)?.email ?? "—",
-      phone: directoryMap.get(g.id)?.phone ?? null,
-      full_name: directoryMap.get(g.id)?.full_name ?? null,
-      portal: directoryMap.get(g.id)?.portal ?? null,
-      created_at: g.created_at,
-      last_sign_in_at: null,
-      roles: g.roles,
-    })),
+    users: Array.from(grouped.values()).map((g) => {
+      const d = directoryMap.get(g.id);
+      return {
+        id: g.id,
+        email: d?.email ?? "—",
+        phone: d?.phone ?? null,
+        full_name: d?.full_name ?? null,
+        first_name: d?.first_name ?? null,
+        last_name: d?.last_name ?? null,
+        address: d?.address ?? null,
+        photo_url: d?.photo_url ?? null,
+        notes: d?.notes ?? null,
+        portal: d?.portal ?? null,
+        created_at: g.created_at,
+        last_sign_in_at: null,
+        roles: g.roles,
+      };
+    }),
   };
 }
 
@@ -89,7 +96,6 @@ export async function createAdminUserClient(input: CreateAdminUserInput) {
 
   const password = input.password && input.password.length >= 6 ? input.password : randomPassword();
 
-  // 1. Création du compte via un client isolé (ne touche pas la session courante)
   const iso = isolatedClient();
   const { data: signed, error: signErr } = await iso.auth.signUp({
     email: input.email,
@@ -106,19 +112,14 @@ export async function createAdminUserClient(input: CreateAdminUserInput) {
 
   let userId = signed?.user?.id ?? null;
   if (!userId) {
-    // Compte déjà existant : on tente de retrouver l'id via la table directory.
     const { data: existing } = await (supabase as any)
-      .from("admin_user_directory")
-      .select("user_id")
-      .eq("email", input.email)
-      .maybeSingle();
+      .from("admin_user_directory").select("user_id").eq("email", input.email).maybeSingle();
     userId = existing?.user_id ?? null;
   }
   if (!userId) {
     throw new Error("Compte créé mais identifiant introuvable. Demandez à l'utilisateur de se connecter une fois pour finaliser l'attribution du rôle.");
   }
 
-  // 2. Assignation du rôle (RLS : super_admin only)
   const db: any = supabase;
   const roleWrite = await db
     .from("user_roles")
@@ -155,12 +156,51 @@ export async function createAdminUserClient(input: CreateAdminUserInput) {
     status: "created",
   });
 
-  return {
-    ok: true as const,
-    user_id: userId,
-    initial_password: password,
-    password_delivered: "manual" as const,
-  };
+  return { ok: true as const, user_id: userId, initial_password: password, password_delivered: "manual" as const };
+}
+
+export type UpdateAdminProfileInput = {
+  user_id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string;
+  email?: string;
+  phone?: string | null;
+  address?: string | null;
+  photo_url?: string | null;
+  notes?: string | null;
+};
+
+export async function updateAdminProfileClient(input: UpdateAdminProfileInput) {
+  const db: any = supabase;
+  const patch: any = { updated_at: new Date().toISOString() };
+  if (input.first_name !== undefined) patch.first_name = input.first_name;
+  if (input.last_name !== undefined) patch.last_name = input.last_name;
+  if (input.phone !== undefined) patch.phone = input.phone;
+  if (input.address !== undefined) patch.address = input.address;
+  if (input.photo_url !== undefined) patch.photo_url = input.photo_url;
+  if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.email !== undefined) patch.email = input.email;
+  if (input.full_name !== undefined) patch.full_name = input.full_name;
+  else if (input.first_name !== undefined || input.last_name !== undefined) {
+    patch.full_name = `${input.first_name ?? ""} ${input.last_name ?? ""}`.trim() || "Sans nom";
+  }
+  const { error } = await db
+    .from("admin_user_directory")
+    .update(patch)
+    .eq("user_id", input.user_id);
+  if (error) throw new Error(`Mise à jour profil : ${error.message}`);
+  return { ok: true as const };
+}
+
+export async function uploadAdminPhotoClient(userId: string, file: File) {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  if (["svg"].includes(ext)) throw new Error("Format SVG interdit.");
+  const path = `admins/${userId}-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+  if (error) throw new Error(`Upload photo : ${error.message}`);
+  const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365);
+  return data?.signedUrl ?? path;
 }
 
 export async function updateAdminUserRoleClient(userId: string, newRole: string) {
@@ -190,5 +230,41 @@ export async function deleteAdminUserClient(userId: string) {
   if (roles.error) throw new Error(`Révocation des rôles : ${roles.error.message}`);
   const directory = await db.from("admin_user_directory").delete().eq("user_id", userId);
   if (directory.error) throw new Error(`Retrait annuaire : ${directory.error.message}`);
+  return { ok: true as const };
+}
+
+// ---- Permissions ----
+
+export type PermissionDef = {
+  key: string;
+  label: string;
+  description: string | null;
+  category: string;
+  portal: string;
+};
+
+export async function listPermissionsAndRolesClient() {
+  const db: any = supabase;
+  const [{ data: catalog, error: cErr }, { data: grants, error: gErr }] = await Promise.all([
+    db.from("permission_catalog").select("*").order("category").order("label"),
+    db.from("role_permissions").select("role, permission_key, allowed"),
+  ]);
+  if (cErr) throw new Error(`Catalogue permissions : ${cErr.message}`);
+  if (gErr) throw new Error(`Lecture permissions : ${gErr.message}`);
+  return {
+    catalog: (catalog ?? []) as PermissionDef[],
+    grants: (grants ?? []) as { role: string; permission_key: string; allowed: boolean }[],
+  };
+}
+
+export async function setRolePermissionClient(role: string, permissionKey: string, allowed: boolean) {
+  const db: any = supabase;
+  const { error } = await db
+    .from("role_permissions")
+    .upsert(
+      { role, permission_key: permissionKey, allowed, updated_at: new Date().toISOString() },
+      { onConflict: "role,permission_key" },
+    );
+  if (error) throw new Error(`Mise à jour permission : ${error.message}`);
   return { ok: true as const };
 }

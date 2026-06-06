@@ -20,7 +20,10 @@ import {
   resetAdminPasswordClient,
   deleteAdminUserClient,
 } from "@/lib/admin-users-client";
-import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy } from "lucide-react";
+import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy, ShieldCheck, Pencil } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PermissionsMatrixDialog } from "@/components/PermissionsMatrixDialog";
+import { EditAdminUserDialog, type EditUserInitial } from "@/components/EditAdminUserDialog";
 
 export const Route = createFileRoute("/miprojet/utilisateurs")({ ssr: false, component: MiprojetUsers });
 
@@ -57,6 +60,8 @@ function MiprojetUsers() {
   const [submitting, setSubmitting] = useState(false);
   const [generatedPwd, setGeneratedPwd] = useState<string | null>(null);
   const [debugError, setDebugError] = useState<string | null>(null);
+  const [permOpen, setPermOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<EditUserInitial | null>(null);
 
   const [form, setForm] = useState({
     portal: "mugec" as "mugec" | "miprojet",
@@ -183,7 +188,14 @@ function MiprojetUsers() {
               <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Administrateurs des deux portails</CardTitle>
               <CardDescription>Créer / révoquer les admins MUGEC-CI et MIPROJET. Réservé au super administrateur.</CardDescription>
             </div>
-            <Button onClick={() => { setGeneratedPwd(null); setDebugError(null); setDialogOpen(true); }}><UserPlus className="mr-2 h-4 w-4"/> Nouveau compte</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setPermOpen(true)}>
+                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" /> Permissions par rôle
+              </Button>
+              <Button onClick={() => { setGeneratedPwd(null); setDebugError(null); setDialogOpen(true); }}>
+                <UserPlus className="mr-2 h-4 w-4" aria-hidden="true" /> Nouveau compte
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {debugError && (
@@ -196,7 +208,7 @@ function MiprojetUsers() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
+                    <TableHead>Utilisateur</TableHead>
                     <TableHead>Téléphone</TableHead>
                     <TableHead>Rôles</TableHead>
                     <TableHead>Dernière connexion</TableHead>
@@ -208,7 +220,12 @@ function MiprojetUsers() {
                     <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Aucun administrateur</TableCell></TableRow>
                   ) : users.map((u) => (
                     <TableRow key={u.id}>
-                      <TableCell className="font-medium">{u.email}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{[u.first_name, u.last_name].filter(Boolean).join(" ") || u.full_name || "—"}</span>
+                          <span className="text-xs text-muted-foreground">{u.email}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs">{u.phone || "—"}</TableCell>
                       <TableCell className="flex flex-wrap gap-1">
                         {u.roles.map((r: string) => (
@@ -217,9 +234,16 @@ function MiprojetUsers() {
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString("fr-FR") : "—"}</TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => handleResetPwd(u.id, u.email)} title="Envoyer un lien de réinitialisation"><KeyRound className="h-4 w-4"/></Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditTarget(u as EditUserInitial)} aria-label={`Modifier ${u.email}`} title="Modifier le profil">
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleResetPwd(u.id, u.email)} aria-label={`Réinitialiser le mot de passe de ${u.email}`} title="Envoyer un lien de réinitialisation">
+                          <KeyRound className="h-4 w-4" aria-hidden="true" />
+                        </Button>
                         {!u.roles.includes("super_admin") && (
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(u.id)} title="Supprimer"><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleDelete(u.id)} aria-label={`Supprimer ${u.email}`} title="Supprimer">
+                            <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -280,7 +304,10 @@ function MiprojetUsers() {
                 <div><Label>Téléphone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+225…" /></div>
               </div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div><Label>Mot de passe (vide = aléatoire sécurisé)</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" /></div>
+              <div>
+                <Label htmlFor="new-pwd">Mot de passe (vide = aléatoire sécurisé)</Label>
+                <PasswordInput id="new-pwd" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" autoComplete="new-password" />
+              </div>
 
               <div>
                 <Label>Envoyer l'invitation par</Label>
@@ -299,6 +326,14 @@ function MiprojetUsers() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PermissionsMatrixDialog open={permOpen} onOpenChange={setPermOpen} />
+      <EditAdminUserDialog
+        open={!!editTarget}
+        onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+        user={editTarget}
+        onSaved={load}
+      />
     </div>
   );
 }
