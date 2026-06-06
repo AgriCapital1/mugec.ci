@@ -20,7 +20,10 @@ import {
   resetAdminPasswordClient,
   deleteAdminUserClient,
 } from "@/lib/admin-users-client";
-import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy } from "lucide-react";
+import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy, ShieldCheck, Pencil } from "lucide-react";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PermissionsMatrixDialog } from "@/components/PermissionsMatrixDialog";
+import { EditAdminUserDialog, type EditUserInitial } from "@/components/EditAdminUserDialog";
 
 export const Route = createFileRoute("/miprojet/utilisateurs")({ ssr: false, component: MiprojetUsers });
 
