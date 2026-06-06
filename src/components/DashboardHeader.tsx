@@ -134,12 +134,21 @@ export function DashboardHeader({
             <MemberAvatarImage src={me?.photo_url} alt="Photo" />
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
-          <Button variant="ghost" size="sm" onClick={() => signOut()} title="Déconnexion">
-            <LogOut className="mr-1 h-4 w-4" /> <span className="hidden sm:inline">Déconnexion</span>
+          <Button variant="ghost" size="sm" onClick={() => signOut()} aria-label="Déconnexion" title="Déconnexion">
+            <LogOut className="mr-1 h-4 w-4" aria-hidden="true" /> <span className="hidden sm:inline">Déconnexion</span>
           </Button>
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen((v) => !v)}>
-            <Menu className="h-5 w-5" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
           </Button>
+
         </div>
       </div>
       {open && (
