@@ -208,7 +208,7 @@ function MiprojetUsers() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
+                    <TableHead>Utilisateur</TableHead>
                     <TableHead>Téléphone</TableHead>
                     <TableHead>Rôles</TableHead>
                     <TableHead>Dernière connexion</TableHead>
