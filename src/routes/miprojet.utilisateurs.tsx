@@ -326,6 +326,14 @@ function MiprojetUsers() {
           )}
         </DialogContent>
       </Dialog>
+
+      <PermissionsMatrixDialog open={permOpen} onOpenChange={setPermOpen} />
+      <EditAdminUserDialog
+        open={!!editTarget}
+        onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+        user={editTarget}
+        onSaved={load}
+      />
     </div>
   );
 }
