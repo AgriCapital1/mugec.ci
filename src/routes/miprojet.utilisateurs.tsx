@@ -60,6 +60,8 @@ function MiprojetUsers() {
   const [submitting, setSubmitting] = useState(false);
   const [generatedPwd, setGeneratedPwd] = useState<string | null>(null);
   const [debugError, setDebugError] = useState<string | null>(null);
+  const [permOpen, setPermOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<EditUserInitial | null>(null);
 
   const [form, setForm] = useState({
     portal: "mugec" as "mugec" | "miprojet",
