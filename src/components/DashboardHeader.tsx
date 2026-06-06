@@ -152,7 +152,7 @@ export function DashboardHeader({
         </div>
       </div>
       {open && (
-        <div className="md:hidden border-t bg-background">
+        <div id="mobile-nav" className="md:hidden border-t bg-background" role="navigation" aria-label="Menu mobile">
           <div className="container mx-auto max-w-7xl px-4 py-2 flex flex-col">
             {nav.map((n) =>
               n.children?.length ? (
