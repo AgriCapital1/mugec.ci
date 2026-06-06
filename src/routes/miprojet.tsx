@@ -24,6 +24,8 @@ function MiprojetGate() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isChildRoute = pathname !== "/miprojet" && pathname !== "/miprojet/";
 
   useEffect(() => {
     let alive = true;
