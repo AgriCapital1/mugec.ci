@@ -39,6 +39,8 @@ export type EditUserInitial = {
   address: string | null;
   photo_url: string | null;
   notes: string | null;
+  login_identifier?: string | null;
+  portal?: string | null;
   roles: string[];
 };
 
