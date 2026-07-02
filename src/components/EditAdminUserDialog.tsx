@@ -56,7 +56,7 @@ export function EditAdminUserDialog({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    first_name: "", last_name: "", email: "", phone: "", address: "", photo_url: "", notes: "", role: "",
+    first_name: "", last_name: "", email: "", phone: "", address: "", photo_url: "", notes: "", role: "", login_identifier: "",
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -74,6 +74,7 @@ export function EditAdminUserDialog({
       photo_url: user.photo_url ?? "",
       notes: user.notes ?? "",
       role: primaryRole,
+      login_identifier: user.login_identifier ?? "",
     });
   }, [user?.id]);
 
