@@ -1671,6 +1671,25 @@ export type Database = {
           },
         ]
       }
+      sensitive_audit_log_enriched: {
+        Row: {
+          action: string | null
+          actor_address: string | null
+          actor_email: string | null
+          actor_id: string | null
+          actor_name: string | null
+          actor_phone: string | null
+          actor_photo_url: string | null
+          actor_portal: string | null
+          details: Json | null
+          id: string | null
+          occurred_at: string | null
+          scope: string | null
+          target_id: string | null
+          target_label: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_dashboard_stats: { Args: never; Returns: Json }
