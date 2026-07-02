@@ -290,6 +290,17 @@ function MiprojetUsers() {
                         <Button size="sm" variant="ghost" onClick={() => setEditTarget(u as EditUserInitial)} aria-label={`Modifier ${u.email}`} title="Modifier le profil">
                           <Pencil className="h-4 w-4" aria-hidden="true" />
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          const msg = buildWhatsAppInvitationMessage({
+                            full_name: u.full_name || u.email, portal: (u.portal === "miprojet" ? "miprojet" : "mugec"),
+                            role: u.roles.find((r: string) => r !== "membre") || "admin",
+                            login_identifier: u.login_identifier || u.email,
+                            password: "(mot de passe à réinitialiser)",
+                          });
+                          setWaState({ open: true, phone: u.phone, message: msg });
+                        }} aria-label={`Envoyer un message WhatsApp à ${u.email}`} title="Message WhatsApp">
+                          <MessageCircle className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={() => handleResetPwd(u.id, u.email)} aria-label={`Réinitialiser le mot de passe de ${u.email}`} title="Envoyer un lien de réinitialisation">
                           <KeyRound className="h-4 w-4" aria-hidden="true" />
                         </Button>
