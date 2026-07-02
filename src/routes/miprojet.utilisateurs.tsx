@@ -19,11 +19,13 @@ import {
   updateAdminUserRoleClient,
   resetAdminPasswordClient,
   deleteAdminUserClient,
+  buildWhatsAppInvitationMessage,
 } from "@/lib/admin-users-client";
-import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy, ShieldCheck, Pencil } from "lucide-react";
+import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy, ShieldCheck, Pencil, Search, MessageCircle } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PermissionsMatrixDialog } from "@/components/PermissionsMatrixDialog";
 import { EditAdminUserDialog, type EditUserInitial } from "@/components/EditAdminUserDialog";
+import { WhatsAppInvitationDialog } from "@/components/WhatsAppInvitationDialog";
 
 export const Route = createFileRoute("/miprojet/utilisateurs")({ ssr: false, component: MiprojetUsers });
 
@@ -62,6 +64,9 @@ function MiprojetUsers() {
   const [debugError, setDebugError] = useState<string | null>(null);
   const [permOpen, setPermOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EditUserInitial | null>(null);
+  const [waState, setWaState] = useState<{ open: boolean; phone: string | null; message: string }>({ open: false, phone: null, message: "" });
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("__all");
 
   const [form, setForm] = useState({
     portal: "mugec" as "mugec" | "miprojet",
@@ -69,6 +74,7 @@ function MiprojetUsers() {
     full_name: "",
     email: "",
     phone: "",
+    login_identifier: "",
     send_via: "email" as "email" | "whatsapp",
     password: "",
   });
@@ -118,9 +124,24 @@ function MiprojetUsers() {
         role: form.role,
         password: form.password || undefined,
         send_via: form.send_via,
+        login_identifier: form.login_identifier || undefined,
       });
       setGeneratedPwd(res.initial_password);
-      toast.success("Utilisateur créé. Communiquez le mot de passe initial à l'utilisateur.");
+      if (form.send_via === "email") {
+        toast.success(res.password_delivered === "email"
+          ? "Compte créé — invitation envoyée par email (Brevo)."
+          : "Compte créé. L'email n'a pas pu être envoyé automatiquement : transmettez le mot de passe manuellement.");
+      } else {
+        const msg = buildWhatsAppInvitationMessage({
+          full_name: form.full_name,
+          portal: form.portal,
+          role: form.role,
+          login_identifier: form.login_identifier || form.email,
+          password: res.initial_password,
+        });
+        setWaState({ open: true, phone: form.phone || null, message: msg });
+        toast.success("Compte créé — préparez l'envoi WhatsApp.");
+      }
       load();
     } catch (e: any) {
       const details = readErrorDetails(e);
@@ -174,6 +195,18 @@ function MiprojetUsers() {
 
   const roles = form.portal === "mugec" ? MUGEC_ROLES : MIPROJET_ROLES;
 
+  const allRolesInUse = Array.from(new Set(users.flatMap((u) => u.roles as string[]))).sort();
+  const q = query.trim().toLowerCase();
+  const visibleUsers = users.filter((u) => {
+    if (roleFilter !== "__all" && !(u.roles as string[]).includes(roleFilter)) return false;
+    if (!q) return true;
+    const hay = [
+      u.full_name, u.first_name, u.last_name, u.email, u.phone,
+      u.login_identifier, ...(u.roles ?? []),
+    ].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+
   if (authorized === null) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Vérification…</div>;
   }
@@ -204,6 +237,26 @@ function MiprojetUsers() {
                 <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">{debugError}</pre>
               </div>
             )}
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher par nom, email, téléphone, identifiant ou rôle…"
+                  className="pl-9"
+                  aria-label="Rechercher un utilisateur"
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="sm:w-64" aria-label="Filtrer par rôle"><SelectValue placeholder="Tous les rôles" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">Tous les rôles</SelectItem>
+                  {allRolesInUse.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground sm:ml-2">{visibleUsers.length} / {users.length}</span>
+            </div>
             {loading ? <div className="py-8 text-center text-muted-foreground">Chargement…</div> : (
               <Table>
                 <TableHeader>
@@ -216,9 +269,9 @@ function MiprojetUsers() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Aucun administrateur</TableCell></TableRow>
-                  ) : users.map((u) => (
+                  {visibleUsers.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Aucun résultat</TableCell></TableRow>
+                  ) : visibleUsers.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
@@ -236,6 +289,17 @@ function MiprojetUsers() {
                       <TableCell className="text-right">
                         <Button size="sm" variant="ghost" onClick={() => setEditTarget(u as EditUserInitial)} aria-label={`Modifier ${u.email}`} title="Modifier le profil">
                           <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => {
+                          const msg = buildWhatsAppInvitationMessage({
+                            full_name: u.full_name || u.email, portal: (u.portal === "miprojet" ? "miprojet" : "mugec"),
+                            role: u.roles.find((r: string) => r !== "membre") || "admin",
+                            login_identifier: u.login_identifier || u.email,
+                            password: "(mot de passe à réinitialiser)",
+                          });
+                          setWaState({ open: true, phone: u.phone, message: msg });
+                        }} aria-label={`Envoyer un message WhatsApp à ${u.email}`} title="Message WhatsApp">
+                          <MessageCircle className="h-4 w-4 text-emerald-600" aria-hidden="true" />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => handleResetPwd(u.id, u.email)} aria-label={`Réinitialiser le mot de passe de ${u.email}`} title="Envoyer un lien de réinitialisation">
                           <KeyRound className="h-4 w-4" aria-hidden="true" />
@@ -305,6 +369,11 @@ function MiprojetUsers() {
               </div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
               <div>
+                <Label htmlFor="new-identifier">Identifiant de connexion (optionnel)</Label>
+                <Input id="new-identifier" value={form.login_identifier} onChange={(e) => setForm({ ...form, login_identifier: e.target.value })} placeholder="ex : marcelkonan" autoComplete="off" />
+                <p className="mt-1 text-xs text-muted-foreground">Court, sans espace. Utilisable à la place de l'email pour se connecter.</p>
+              </div>
+              <div>
                 <Label htmlFor="new-pwd">Mot de passe (vide = aléatoire sécurisé)</Label>
                 <PasswordInput id="new-pwd" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" autoComplete="new-password" />
               </div>
@@ -333,6 +402,12 @@ function MiprojetUsers() {
         onOpenChange={(o) => { if (!o) setEditTarget(null); }}
         user={editTarget}
         onSaved={load}
+      />
+      <WhatsAppInvitationDialog
+        open={waState.open}
+        onOpenChange={(o) => setWaState((s) => ({ ...s, open: o }))}
+        phone={waState.phone}
+        message={waState.message}
       />
     </div>
   );

@@ -39,6 +39,8 @@ export type EditUserInitial = {
   address: string | null;
   photo_url: string | null;
   notes: string | null;
+  login_identifier?: string | null;
+  portal?: string | null;
   roles: string[];
 };
 
@@ -54,7 +56,7 @@ export function EditAdminUserDialog({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    first_name: "", last_name: "", email: "", phone: "", address: "", photo_url: "", notes: "", role: "",
+    first_name: "", last_name: "", email: "", phone: "", address: "", photo_url: "", notes: "", role: "", login_identifier: "",
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -72,6 +74,7 @@ export function EditAdminUserDialog({
       photo_url: user.photo_url ?? "",
       notes: user.notes ?? "",
       role: primaryRole,
+      login_identifier: user.login_identifier ?? "",
     });
   }, [user?.id]);
 
@@ -107,6 +110,7 @@ export function EditAdminUserDialog({
         address: form.address || null,
         photo_url: form.photo_url || null,
         notes: form.notes || null,
+        login_identifier: form.login_identifier?.trim() || null,
       });
       if (!isSuper && form.role && !user.roles.includes(form.role)) {
         await updateAdminUserRoleClient(user.id, form.role);
@@ -174,9 +178,15 @@ export function EditAdminUserDialog({
               <Input id="edit-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+225…" />
             </div>
           </div>
-          <div>
-            <Label htmlFor="edit-address">Adresse</Label>
-            <Input id="edit-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="edit-address">Adresse</Label>
+              <Input id="edit-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="edit-identifier">Identifiant de connexion</Label>
+              <Input id="edit-identifier" value={form.login_identifier} onChange={(e) => setForm({ ...form, login_identifier: e.target.value })} placeholder="ex : marcelkonan" autoComplete="off" />
+            </div>
           </div>
           {!isSuper && (
             <div>

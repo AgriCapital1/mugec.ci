@@ -34,6 +34,7 @@ import { Route as MembreFicheRouteImport } from './routes/membre/fiche'
 import { Route as MembreDocumentsRouteImport } from './routes/membre/documents'
 import { Route as MembreCotisationsRouteImport } from './routes/membre/cotisations'
 import { Route as MembreCarteRouteImport } from './routes/membre/carte'
+import { Route as ApiSendAdminInvitationRouteImport } from './routes/api/send-admin-invitation'
 import { Route as AdminPrestationsRouteImport } from './routes/admin/prestations'
 import { Route as AdminOpportunitesRouteImport } from './routes/admin/opportunites'
 import { Route as AdminNotificationsRouteImport } from './routes/admin/notifications'
@@ -171,6 +172,11 @@ const MembreCarteRoute = MembreCarteRouteImport.update({
   path: '/carte',
   getParentRoute: () => MembreRoute,
 } as any)
+const ApiSendAdminInvitationRoute = ApiSendAdminInvitationRouteImport.update({
+  id: '/api/send-admin-invitation',
+  path: '/api/send-admin-invitation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminPrestationsRoute = AdminPrestationsRouteImport.update({
   id: '/prestations',
   path: '/prestations',
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/opportunites': typeof AdminOpportunitesRoute
   '/admin/prestations': typeof AdminPrestationsRoute
+  '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
   '/membre/carte': typeof MembreCarteRoute
   '/membre/cotisations': typeof MembreCotisationsRoute
   '/membre/documents': typeof MembreDocumentsRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/opportunites': typeof AdminOpportunitesRoute
   '/admin/prestations': typeof AdminPrestationsRoute
+  '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
   '/membre/carte': typeof MembreCarteRoute
   '/membre/cotisations': typeof MembreCotisationsRoute
   '/membre/documents': typeof MembreDocumentsRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/opportunites': typeof AdminOpportunitesRoute
   '/admin/prestations': typeof AdminPrestationsRoute
+  '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
   '/membre/carte': typeof MembreCarteRoute
   '/membre/cotisations': typeof MembreCotisationsRoute
   '/membre/documents': typeof MembreDocumentsRoute
@@ -369,6 +378,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/opportunites'
     | '/admin/prestations'
+    | '/api/send-admin-invitation'
     | '/membre/carte'
     | '/membre/cotisations'
     | '/membre/documents'
@@ -405,6 +415,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/opportunites'
     | '/admin/prestations'
+    | '/api/send-admin-invitation'
     | '/membre/carte'
     | '/membre/cotisations'
     | '/membre/documents'
@@ -443,6 +454,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/opportunites'
     | '/admin/prestations'
+    | '/api/send-admin-invitation'
     | '/membre/carte'
     | '/membre/cotisations'
     | '/membre/documents'
@@ -474,6 +486,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScannerRoute: typeof ScannerRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiSendAdminInvitationRoute: typeof ApiSendAdminInvitationRoute
   VerifierMatriculeRoute: typeof VerifierMatriculeRoute
   ApiPublicHooksEnqueueCotisationRemindersRoute: typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   ApiPublicHooksProcessNotificationQueueRoute: typeof ApiPublicHooksProcessNotificationQueueRoute
@@ -657,6 +670,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MembreCarteRouteImport
       parentRoute: typeof MembreRoute
     }
+    '/api/send-admin-invitation': {
+      id: '/api/send-admin-invitation'
+      path: '/api/send-admin-invitation'
+      fullPath: '/api/send-admin-invitation'
+      preLoaderRoute: typeof ApiSendAdminInvitationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/prestations': {
       id: '/admin/prestations'
       path: '/prestations'
@@ -814,6 +834,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ScannerRoute: ScannerRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiSendAdminInvitationRoute: ApiSendAdminInvitationRoute,
   VerifierMatriculeRoute: VerifierMatriculeRoute,
   ApiPublicHooksEnqueueCotisationRemindersRoute:
     ApiPublicHooksEnqueueCotisationRemindersRoute,
