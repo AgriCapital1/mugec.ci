@@ -1693,6 +1693,10 @@ export type Database = {
     }
     Functions: {
       admin_dashboard_stats: { Args: never; Returns: Json }
+      admin_lookup_user_id_by_email: {
+        Args: { p_email: string }
+        Returns: string
+      }
       calculate_prestation_amount: {
         Args: { _date_inscription?: string; _type: string }
         Returns: number
