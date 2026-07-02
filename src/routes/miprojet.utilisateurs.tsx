@@ -19,11 +19,13 @@ import {
   updateAdminUserRoleClient,
   resetAdminPasswordClient,
   deleteAdminUserClient,
+  buildWhatsAppInvitationMessage,
 } from "@/lib/admin-users-client";
-import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy, ShieldCheck, Pencil } from "lucide-react";
+import { UserPlus, Trash2, KeyRound, Users, Loader2, Copy, ShieldCheck, Pencil, Search, MessageCircle } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PermissionsMatrixDialog } from "@/components/PermissionsMatrixDialog";
 import { EditAdminUserDialog, type EditUserInitial } from "@/components/EditAdminUserDialog";
+import { WhatsAppInvitationDialog } from "@/components/WhatsAppInvitationDialog";
 
 export const Route = createFileRoute("/miprojet/utilisateurs")({ ssr: false, component: MiprojetUsers });
 
