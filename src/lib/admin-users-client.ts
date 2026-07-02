@@ -34,7 +34,7 @@ export async function listAdminUsersClient() {
   const db: any = supabase;
   const [{ data: roles, error: rolesErr }, { data: directory }] = await Promise.all([
     db.from("user_roles").select("user_id, role, created_at"),
-    db.from("admin_user_directory").select("user_id, email, phone, full_name, first_name, last_name, address, photo_url, notes, portal, created_at"),
+    db.from("admin_user_directory").select("user_id, email, phone, full_name, first_name, last_name, address, photo_url, notes, portal, login_identifier, created_at"),
   ]);
   if (rolesErr) throw new Error(`Lecture des rôles : ${rolesErr.message}`);
 
