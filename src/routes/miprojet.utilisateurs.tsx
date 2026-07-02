@@ -64,6 +64,9 @@ function MiprojetUsers() {
   const [debugError, setDebugError] = useState<string | null>(null);
   const [permOpen, setPermOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EditUserInitial | null>(null);
+  const [waState, setWaState] = useState<{ open: boolean; phone: string | null; message: string }>({ open: false, phone: null, message: "" });
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("__all");
 
   const [form, setForm] = useState({
     portal: "mugec" as "mugec" | "miprojet",
@@ -71,6 +74,7 @@ function MiprojetUsers() {
     full_name: "",
     email: "",
     phone: "",
+    login_identifier: "",
     send_via: "email" as "email" | "whatsapp",
     password: "",
   });
