@@ -124,9 +124,24 @@ function MiprojetUsers() {
         role: form.role,
         password: form.password || undefined,
         send_via: form.send_via,
+        login_identifier: form.login_identifier || undefined,
       });
       setGeneratedPwd(res.initial_password);
-      toast.success("Utilisateur créé. Communiquez le mot de passe initial à l'utilisateur.");
+      if (form.send_via === "email") {
+        toast.success(res.password_delivered === "email"
+          ? "Compte créé — invitation envoyée par email (Brevo)."
+          : "Compte créé. L'email n'a pas pu être envoyé automatiquement : transmettez le mot de passe manuellement.");
+      } else {
+        const msg = buildWhatsAppInvitationMessage({
+          full_name: form.full_name,
+          portal: form.portal,
+          role: form.role,
+          login_identifier: form.login_identifier || form.email,
+          password: res.initial_password,
+        });
+        setWaState({ open: true, phone: form.phone || null, message: msg });
+        toast.success("Compte créé — préparez l'envoi WhatsApp.");
+      }
       load();
     } catch (e: any) {
       const details = readErrorDetails(e);
