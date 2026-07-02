@@ -63,6 +63,7 @@ export async function listAdminUsersClient() {
         photo_url: d?.photo_url ?? null,
         notes: d?.notes ?? null,
         portal: d?.portal ?? null,
+        login_identifier: d?.login_identifier ?? null,
         created_at: g.created_at,
         last_sign_in_at: null,
         roles: g.roles,
