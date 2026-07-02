@@ -254,6 +254,7 @@ export type UpdateAdminProfileInput = {
   address?: string | null;
   photo_url?: string | null;
   notes?: string | null;
+  login_identifier?: string | null;
 };
 
 export async function updateAdminProfileClient(input: UpdateAdminProfileInput) {
@@ -266,15 +267,19 @@ export async function updateAdminProfileClient(input: UpdateAdminProfileInput) {
   if (input.photo_url !== undefined) patch.photo_url = input.photo_url;
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.email !== undefined) patch.email = input.email;
+  if (input.login_identifier !== undefined) patch.login_identifier = input.login_identifier;
   if (input.full_name !== undefined) patch.full_name = input.full_name;
   else if (input.first_name !== undefined || input.last_name !== undefined) {
     patch.full_name = `${input.first_name ?? ""} ${input.last_name ?? ""}`.trim() || "Sans nom";
   }
-  const { error } = await db
+  const { data, error } = await db
     .from("admin_user_directory")
     .update(patch)
-    .eq("user_id", input.user_id);
+    .eq("user_id", input.user_id)
+    .select("user_id")
+    .maybeSingle();
   if (error) throw new Error(`Mise à jour profil : ${error.message}`);
+  if (!data) throw new Error("Profil introuvable ou non modifié (droits insuffisants).");
   return { ok: true as const };
 }
 
