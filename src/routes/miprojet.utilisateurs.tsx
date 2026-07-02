@@ -369,6 +369,11 @@ function MiprojetUsers() {
               </div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
               <div>
+                <Label htmlFor="new-identifier">Identifiant de connexion (optionnel)</Label>
+                <Input id="new-identifier" value={form.login_identifier} onChange={(e) => setForm({ ...form, login_identifier: e.target.value })} placeholder="ex : marcelkonan" autoComplete="off" />
+                <p className="mt-1 text-xs text-muted-foreground">Court, sans espace. Utilisable à la place de l'email pour se connecter.</p>
+              </div>
+              <div>
                 <Label htmlFor="new-pwd">Mot de passe (vide = aléatoire sécurisé)</Label>
                 <PasswordInput id="new-pwd" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Laisser vide pour génération automatique" autoComplete="new-password" />
               </div>
@@ -397,6 +402,12 @@ function MiprojetUsers() {
         onOpenChange={(o) => { if (!o) setEditTarget(null); }}
         user={editTarget}
         onSaved={load}
+      />
+      <WhatsAppInvitationDialog
+        open={waState.open}
+        onOpenChange={(o) => setWaState((s) => ({ ...s, open: o }))}
+        phone={waState.phone}
+        message={waState.message}
       />
     </div>
   );
