@@ -110,6 +110,7 @@ export function EditAdminUserDialog({
         address: form.address || null,
         photo_url: form.photo_url || null,
         notes: form.notes || null,
+        login_identifier: form.login_identifier?.trim() || null,
       });
       if (!isSuper && form.role && !user.roles.includes(form.role)) {
         await updateAdminUserRoleClient(user.id, form.role);
