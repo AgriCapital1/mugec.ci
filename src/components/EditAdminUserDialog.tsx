@@ -178,9 +178,15 @@ export function EditAdminUserDialog({
               <Input id="edit-phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+225…" />
             </div>
           </div>
-          <div>
-            <Label htmlFor="edit-address">Adresse</Label>
-            <Input id="edit-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="edit-address">Adresse</Label>
+              <Input id="edit-address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="edit-identifier">Identifiant de connexion</Label>
+              <Input id="edit-identifier" value={form.login_identifier} onChange={(e) => setForm({ ...form, login_identifier: e.target.value })} placeholder="ex : marcelkonan" autoComplete="off" />
+            </div>
           </div>
           {!isSuper && (
             <div>
