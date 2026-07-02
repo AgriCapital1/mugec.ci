@@ -195,6 +195,18 @@ function MiprojetUsers() {
 
   const roles = form.portal === "mugec" ? MUGEC_ROLES : MIPROJET_ROLES;
 
+  const allRolesInUse = Array.from(new Set(users.flatMap((u) => u.roles as string[]))).sort();
+  const q = query.trim().toLowerCase();
+  const visibleUsers = users.filter((u) => {
+    if (roleFilter !== "__all" && !(u.roles as string[]).includes(roleFilter)) return false;
+    if (!q) return true;
+    const hay = [
+      u.full_name, u.first_name, u.last_name, u.email, u.phone,
+      u.login_identifier, ...(u.roles ?? []),
+    ].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+
   if (authorized === null) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Vérification…</div>;
   }
@@ -225,6 +237,26 @@ function MiprojetUsers() {
                 <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs">{debugError}</pre>
               </div>
             )}
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher par nom, email, téléphone, identifiant ou rôle…"
+                  className="pl-9"
+                  aria-label="Rechercher un utilisateur"
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="sm:w-64" aria-label="Filtrer par rôle"><SelectValue placeholder="Tous les rôles" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">Tous les rôles</SelectItem>
+                  {allRolesInUse.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground sm:ml-2">{visibleUsers.length} / {users.length}</span>
+            </div>
             {loading ? <div className="py-8 text-center text-muted-foreground">Chargement…</div> : (
               <Table>
                 <TableHeader>
@@ -237,9 +269,9 @@ function MiprojetUsers() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Aucun administrateur</TableCell></TableRow>
-                  ) : users.map((u) => (
+                  {visibleUsers.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Aucun résultat</TableCell></TableRow>
+                  ) : visibleUsers.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
