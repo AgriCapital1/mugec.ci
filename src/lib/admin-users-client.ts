@@ -79,14 +79,14 @@ export type CreateAdminUserInput = {
   role: string;
   password?: string;
   send_via?: "email" | "whatsapp";
+  login_identifier?: string | null;
 };
+
+const IGNORABLE_SIGNUP = /already registered|already exists|user already|sending confirmation|confirmation email|sending email|smtp|email rate limit|email_send_failure/i;
 
 export async function createAdminUserClient(input: CreateAdminUserInput) {
   if (!input.email || !input.full_name) throw new Error("Email et nom complet requis.");
-
-  if (input.portal === "mugec" && !MUGEC_ROLES.has(input.role)) {
-    throw new Error("Rôle MUGEC-CI invalide.");
-  }
+  if (input.portal === "mugec" && !MUGEC_ROLES.has(input.role)) throw new Error("Rôle MUGEC-CI invalide.");
   if (input.portal === "miprojet" && !["super_admin", "miprojet_admin", "miprojet_viewer"].includes(input.role)) {
     throw new Error("Rôle MIPROJET invalide.");
   }
@@ -106,21 +106,29 @@ export async function createAdminUserClient(input: CreateAdminUserInput) {
       emailRedirectTo: `${window.location.origin}${input.portal === "miprojet" ? "/miprojet" : "/admin"}`,
     },
   });
-  if (signErr && !/already registered|already exists|user already/i.test(signErr.message)) {
+  if (signErr && !IGNORABLE_SIGNUP.test(signErr.message)) {
     throw new Error(`Création refusée : ${signErr.message}`);
   }
 
   let userId = signed?.user?.id ?? null;
+  const db: any = supabase;
   if (!userId) {
-    const { data: existing } = await (supabase as any)
+    const { data: existing } = await db
       .from("admin_user_directory").select("user_id").eq("email", input.email).maybeSingle();
     userId = existing?.user_id ?? null;
   }
   if (!userId) {
-    throw new Error("Compte créé mais identifiant introuvable. Demandez à l'utilisateur de se connecter une fois pour finaliser l'attribution du rôle.");
+    // Le SMTP Supabase a échoué (envoi confirmation) mais le compte a probablement
+    // été créé. On le retrouve via un RPC SECURITY DEFINER (réservé super_admin).
+    const { data: fetched } = await db.rpc("admin_lookup_user_id_by_email", { p_email: input.email });
+    if (typeof fetched === "string") userId = fetched;
+  }
+  if (!userId) {
+    throw new Error(
+      "Compte créé côté Supabase mais identifiant introuvable. Ouvrez Supabase → Auth → Users pour vérifier, ou demandez à l'utilisateur de se connecter une fois pour finaliser.",
+    );
   }
 
-  const db: any = supabase;
   const roleWrite = await db
     .from("user_roles")
     .upsert({ user_id: userId, role: input.role }, { onConflict: "user_id,role", ignoreDuplicates: true });
@@ -140,6 +148,7 @@ export async function createAdminUserClient(input: CreateAdminUserInput) {
       phone: input.phone || null,
       full_name: input.full_name,
       portal: input.portal,
+      login_identifier: input.login_identifier?.trim() || null,
       created_by: actor.user.id,
     },
     { onConflict: "user_id" },
@@ -156,7 +165,82 @@ export async function createAdminUserClient(input: CreateAdminUserInput) {
     status: "created",
   });
 
-  return { ok: true as const, user_id: userId, initial_password: password, password_delivered: "manual" as const };
+  // Envoi Brevo direct depuis le navigateur (clé publique CORS n'est pas
+  // exposée : on passe par un endpoint public Brevo qui accepte le header
+  // api-key). Si BREVO_API_KEY n'est pas exposée côté client, on n'échoue pas :
+  // le mot de passe est de toute façon retourné pour transmission manuelle.
+  let deliveredEmail: "email" | "manual" = "manual";
+  if ((input.send_via ?? "email") === "email") {
+    try {
+      const sent = await sendInvitationEmailViaBrevo({
+        to_email: input.email,
+        to_name: input.full_name,
+        portal: input.portal,
+        role: input.role,
+        login_identifier: input.login_identifier?.trim() || input.email,
+        password,
+      });
+      if (sent) deliveredEmail = "email";
+    } catch (e) { console.warn("brevo send failed", e); }
+  }
+
+  return {
+    ok: true as const,
+    user_id: userId,
+    initial_password: password,
+    password_delivered: deliveredEmail,
+  };
+}
+
+// ---- Envoi d'email d'invitation (Brevo direct via server function) ----
+async function sendInvitationEmailViaBrevo(payload: {
+  to_email: string;
+  to_name: string;
+  portal: "mugec" | "miprojet";
+  role: string;
+  login_identifier: string;
+  password: string;
+}): Promise<boolean> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return false;
+  try {
+    const r = await fetch("/api/send-admin-invitation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+// ---- Message WhatsApp prêt-à-envoyer ----
+export function buildWhatsAppInvitationMessage(opts: {
+  full_name: string;
+  portal: "mugec" | "miprojet";
+  role: string;
+  login_identifier: string;
+  password: string;
+}) {
+  const portalLabel = opts.portal === "miprojet" ? "MIPROJET" : "MUGEC-CI";
+  const url = opts.portal === "miprojet"
+    ? "https://mugecci.ivoireprojet.com/miprojet"
+    : "https://mugecci.ivoireprojet.com/admin";
+  return (
+    `👋 Bonjour ${opts.full_name},\n\n` +
+    `Votre compte *${portalLabel}* vient d'être créé par MIPROJET pour la MUGEC-CI.\n\n` +
+    `🧩 *Rôle* : ${opts.role}\n` +
+    `👤 *Identifiant* : ${opts.login_identifier}\n` +
+    `🔑 *Mot de passe provisoire* : ${opts.password}\n\n` +
+    `🔗 Connectez-vous ici : ${url}\n\n` +
+    `⚠️ Ce mot de passe est à changer dès la première connexion.\n` +
+    `— L'équipe MIPROJET`
+  );
+}
+
+export function buildWhatsAppLink(phone: string | null | undefined, message: string) {
+  const digits = (phone ?? "").replace(/\D+/g, "");
+  const encoded = encodeURIComponent(message);
+  return digits ? `https://wa.me/${digits}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
 }
 
 export type UpdateAdminProfileInput = {
