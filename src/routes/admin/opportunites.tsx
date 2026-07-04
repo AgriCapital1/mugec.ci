@@ -14,8 +14,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { RichEditor } from "@/components/RichEditor";
-import { generateArticle, generateArticleImages, upsertOpportunite, deleteContent } from "@/lib/ai-editor.functions";
-import { deleteContentViaApi, generateArticleImagesViaApi, generateArticleViaApi, shouldUseAiEditorApi, upsertOpportuniteViaApi } from "@/lib/ai-editor-api";
+import { ContentImageUpload } from "@/components/ContentImageUpload";
+import { generateArticle, generateArticleImages, upsertOpportunite, deleteContent, uploadContentImage } from "@/lib/ai-editor.functions";
+import { deleteContentViaApi, generateArticleImagesViaApi, generateArticleViaApi, shouldUseAiEditorApi, uploadContentImageViaApi, upsertOpportuniteViaApi } from "@/lib/ai-editor-api";
 import { Sparkles, Plus, Edit, Trash2, Wand2, Image as ImageIcon, Loader2, Briefcase } from "lucide-react";
 
 export const Route = createFileRoute("/admin/opportunites")({ component: OpportunitesAdmin });
@@ -61,6 +62,13 @@ function OpportunitesAdmin() {
   const genImages = useServerFn(generateArticleImages);
   const save = useServerFn(upsertOpportunite);
   const del = useServerFn(deleteContent);
+  const uploadImage = useServerFn(uploadContentImage);
+
+  async function uploadCover(payload: { dataUrl: string; folder: "actualites" | "opportunites" }) {
+    return shouldUseAiEditorApi()
+      ? uploadContentImageViaApi(payload)
+      : uploadImage({ data: payload });
+  }
 
   async function load() {
     setLoading(true);
@@ -254,9 +262,14 @@ function OpportunitesAdmin() {
                 <Input value={current.type ?? ""} onChange={(e) => setCurrent({ ...current, type: e.target.value, category: e.target.value })} placeholder="Emploi, Formation, Marché public…" /></div>
               <div><Label>Lieu</Label><Input value={current.lieu ?? ""} onChange={(e) => setCurrent({ ...current, lieu: e.target.value })} /></div>
               <div><Label>Date limite</Label><Input type="date" value={current.date_limite ?? ""} onChange={(e) => setCurrent({ ...current, date_limite: e.target.value })} /></div>
-              <div><Label>Image de couverture (URL)</Label>
-                <Input value={current.cover_url ?? ""} onChange={(e) => setCurrent({ ...current, cover_url: e.target.value })} />
-                {current.cover_url && <img src={current.cover_url} alt="" className="mt-2 rounded border max-h-32 object-cover w-full"/>}</div>
+              <div><Label>Image de couverture</Label>
+                <ContentImageUpload
+                  value={current.cover_url ?? ""}
+                  folder="opportunites"
+                  disabled={saving}
+                  uploadImage={uploadCover}
+                  onChange={(url) => setCurrent({ ...current, cover_url: url })}
+                /></div>
               <div><Label>Tags (virgule)</Label>
                 <Input value={(current.tags ?? []).join(", ")} onChange={(e) => setCurrent({ ...current, tags: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></div>
               <div><Label>Meta titre</Label><Input value={current.meta_title ?? ""} onChange={(e) => setCurrent({ ...current, meta_title: e.target.value })} /></div>

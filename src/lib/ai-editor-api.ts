@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 type AiAction =
   | "generateArticle"
   | "generateArticleImages"
+  | "uploadContentImage"
   | "upsertNews"
   | "upsertOpportunite"
   | "deleteContent";
@@ -57,6 +58,9 @@ export const generateArticleViaApi = (data: unknown) =>
 
 export const generateArticleImagesViaApi = (data: unknown) =>
   callAiEditorApi<{ urls: string[] }>("generateArticleImages", data);
+
+export const uploadContentImageViaApi = (data: unknown) =>
+  callAiEditorApi<{ url: string }>("uploadContentImage", data);
 
 export const upsertNewsViaApi = (data: unknown) =>
   callAiEditorApi<{ ok: true; id: string }>("upsertNews", data);

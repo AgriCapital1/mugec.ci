@@ -300,6 +300,7 @@ export default async function handler(request: any, response: any) {
     const { action, data } = z.object({ action: z.string(), data: z.unknown() }).parse(body);
     const result = action === "generateArticle" ? await generateArticle(data)
       : action === "generateArticleImages" ? await generateArticleImages(data, client)
+      : action === "uploadContentImage" ? { url: await uploadDataUrl(z.object({ dataUrl: z.string().min(20).max(28_000_000), folder: z.enum(["actualites", "opportunites"]).default("actualites") }).parse(data).dataUrl, z.object({ dataUrl: z.string().min(20).max(28_000_000), folder: z.enum(["actualites", "opportunites"]).default("actualites") }).parse(data).folder, client) }
       : action === "upsertNews" ? await upsertNews(data, userId, client)
       : action === "upsertOpportunite" ? await upsertOpportunite(data, client)
       : action === "deleteContent" ? await deleteContent(data, client)

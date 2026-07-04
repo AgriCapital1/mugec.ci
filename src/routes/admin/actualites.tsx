@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { DashboardHeader, ADMIN_NAV } from "@/components/DashboardHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,8 +14,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { RichEditor } from "@/components/RichEditor";
-import { generateArticle, generateArticleImages, upsertNews, deleteContent } from "@/lib/ai-editor.functions";
-import { deleteContentViaApi, generateArticleImagesViaApi, generateArticleViaApi, shouldUseAiEditorApi, upsertNewsViaApi } from "@/lib/ai-editor-api";
+import { ContentImageUpload } from "@/components/ContentImageUpload";
+import { generateArticle, generateArticleImages, upsertNews, deleteContent, uploadContentImage } from "@/lib/ai-editor.functions";
+import { deleteContentViaApi, generateArticleImagesViaApi, generateArticleViaApi, shouldUseAiEditorApi, uploadContentImageViaApi, upsertNewsViaApi } from "@/lib/ai-editor-api";
 import { Sparkles, Plus, Edit, Trash2, Wand2, Eye, Image as ImageIcon, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin/actualites")({ component: ActualitesPage });
@@ -60,6 +61,13 @@ function ActualitesPage() {
   const genImages = useServerFn(generateArticleImages);
   const save = useServerFn(upsertNews);
   const del = useServerFn(deleteContent);
+  const uploadImage = useServerFn(uploadContentImage);
+
+  async function uploadCover(payload: { dataUrl: string; folder: "actualites" | "opportunites" }) {
+    return shouldUseAiEditorApi()
+      ? uploadContentImageViaApi(payload)
+      : uploadImage({ data: payload });
+  }
 
   async function load() {
     setLoading(true);
@@ -298,9 +306,14 @@ function ActualitesPage() {
                 <Switch checked={current.published} onCheckedChange={(v) => setCurrent({ ...current, published: v })} />
               </div>
               <div>
-                <Label>Image de couverture (URL)</Label>
-                <Input value={current.cover_url ?? ""} onChange={(e) => setCurrent({ ...current, cover_url: e.target.value })} placeholder="https://…" />
-                {current.cover_url && <img src={current.cover_url} alt="" className="mt-2 rounded border max-h-32 object-cover w-full" />}
+                <Label>Image de couverture</Label>
+                <ContentImageUpload
+                  value={current.cover_url ?? ""}
+                  folder="actualites"
+                  disabled={saving}
+                  uploadImage={uploadCover}
+                  onChange={(url) => setCurrent({ ...current, cover_url: url })}
+                />
               </div>
               <div>
                 <Label>Catégorie</Label>
