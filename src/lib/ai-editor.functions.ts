@@ -1,12 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-// Les nouvelles colonnes (slug, summary, illustrations, …) n'existent pas
-// encore dans le types.ts généré : on utilise un proxy non typé pour ces
-// écritures avant régénération.
-const db: any = supabaseAdmin;
 
 const ADMIN_ROLES = new Set([
   "super_admin", "admin_national", "admin_regional", "admin_local", "agent_saisie",
@@ -15,13 +9,14 @@ const ADMIN_ROLES = new Set([
   "tresorier_regional", "delegue_section",
 ]);
 
-async function assertAdmin(userId: string) {
-  const { data } = await supabaseAdmin
+async function assertAdmin(supabase: any, userId: string) {
+  const { data, error } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId);
-  const ok = (data ?? []).some((r) => ADMIN_ROLES.has(String(r.role)));
-  if (!ok) throw new Error("Accès refusé");
+  if (error) throw new Error(`Lecture des rôles refusée : ${error.message}`);
+  const ok = (data ?? []).some((r: { role: unknown }) => ADMIN_ROLES.has(String(r.role)));
+  if (!ok) throw new Error("Accès refusé : votre compte n'a pas de rôle administrateur.");
 }
 
 function slugify(s: string) {
@@ -58,7 +53,7 @@ export const generateArticle = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const kindLabel = data.kind === "actualite" ? "actualité" : "opportunité";
     const system = `Tu es l'éditeur officiel de MUGEC-CI (Mutuelle Générale des Collectivités de Côte d'Ivoire). Rédige une ${kindLabel} professionnelle, claire, en français, ton institutionnel sobre, structurée en HTML (h2, h3, p, ul/li, blockquote, strong). Réponds STRICTEMENT en JSON valide.`;
     const user = `Sujet / brief : "${data.topic}"
@@ -131,7 +126,7 @@ const SAFE_IMAGE_TYPES = new Set([
   "image/avif",
 ]);
 
-async function uploadDataUrl(dataUrl: string, folder: string): Promise<string> {
+async function uploadDataUrl(supabase: any, dataUrl: string, folder: string): Promise<string> {
   const m = dataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
   if (!m) throw new Error("Image invalide");
   const mime = m[1].toLowerCase();
@@ -141,11 +136,11 @@ async function uploadDataUrl(dataUrl: string, folder: string): Promise<string> {
   const ext = mime.split("/")[1] || "png";
   const buf = Buffer.from(m[2], "base64");
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabaseAdmin.storage.from("content").upload(path, buf, {
+  const { error } = await supabase.storage.from("content").upload(path, buf, {
     contentType: mime, upsert: false,
   });
   if (error) throw new Error(error.message);
-  const { data } = supabaseAdmin.storage.from("content").getPublicUrl(path);
+  const { data } = supabase.storage.from("content").getPublicUrl(path);
   return data.publicUrl;
 }
 
@@ -161,14 +156,14 @@ export const generateArticleImages = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const n = data.mode === "cover" ? 1 : Math.min(3, data.count);
     const urls: string[] = [];
     for (let i = 0; i < n; i++) {
       const dataUrl = await generateImageDataUrl(
         n === 1 ? data.prompt : `${data.prompt} — vue ${i + 1}, angle différent`,
       );
-      const url = await uploadDataUrl(dataUrl, data.folder);
+      const url = await uploadDataUrl(context.supabase, dataUrl, data.folder);
       urls.push(url);
     }
     return { urls };
@@ -193,7 +188,8 @@ export const upsertNews = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => newsSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.supabase, context.userId);
+    const db: any = context.supabase;
     const payload: any = {
       title: data.title,
       slug: data.slug || slugify(data.title),
@@ -241,7 +237,8 @@ export const upsertOpportunite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => oppSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.supabase, context.userId);
+    const db: any = context.supabase;
     const payload: any = {
       title: data.title,
       slug: data.slug || slugify(data.title),
@@ -278,7 +275,8 @@ export const deleteContent = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.supabase, context.userId);
+    const db: any = context.supabase;
     const { error } = await db.from(data.kind).delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -294,7 +292,7 @@ export const uploadContentImage = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
-    const url = await uploadDataUrl(data.dataUrl, data.folder);
+    await assertAdmin(context.supabase, context.userId);
+    const url = await uploadDataUrl(context.supabase, data.dataUrl, data.folder);
     return { url };
   });
