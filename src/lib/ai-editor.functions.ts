@@ -53,7 +53,7 @@ export const generateArticle = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.userId);
+    await assertAdmin(context.supabase, context.userId);
     const kindLabel = data.kind === "actualite" ? "actualité" : "opportunité";
     const system = `Tu es l'éditeur officiel de MUGEC-CI (Mutuelle Générale des Collectivités de Côte d'Ivoire). Rédige une ${kindLabel} professionnelle, claire, en français, ton institutionnel sobre, structurée en HTML (h2, h3, p, ul/li, blockquote, strong). Réponds STRICTEMENT en JSON valide.`;
     const user = `Sujet / brief : "${data.topic}"
