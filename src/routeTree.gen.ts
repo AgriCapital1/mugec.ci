@@ -15,6 +15,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OpportunitesRouteImport } from './routes/opportunites'
 import { Route as MiprojetRouteImport } from './routes/miprojet'
 import { Route as MembreRouteImport } from './routes/membre'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InscriptionRouteImport } from './routes/inscription'
 import { Route as ForumRouteImport } from './routes/forum'
@@ -43,6 +44,9 @@ import { Route as AdminMembresRouteImport } from './routes/admin/membres'
 import { Route as AdminDroitsAdhesionRouteImport } from './routes/admin/droits-adhesion'
 import { Route as AdminCotisationsRouteImport } from './routes/admin/cotisations'
 import { Route as AdminActualitesRouteImport } from './routes/admin/actualites'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicHooksResetAdminCredentialsRouteImport } from './routes/api/public/hooks/reset-admin-credentials'
 import { Route as ApiPublicHooksProcessNotificationQueueRouteImport } from './routes/api/public/hooks/process-notification-queue'
 import { Route as ApiPublicHooksEnqueueCotisationRemindersRouteImport } from './routes/api/public/hooks/enqueue-cotisation-reminders'
@@ -75,6 +79,11 @@ const MiprojetRoute = MiprojetRouteImport.update({
 const MembreRoute = MembreRouteImport.update({
   id: '/membre',
   path: '/membre',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -217,6 +226,24 @@ const AdminActualitesRoute = AdminActualitesRouteImport.update({
   path: '/actualites',
   getParentRoute: () => AdminRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksResetAdminCredentialsRoute =
   ApiPublicHooksResetAdminCredentialsRouteImport.update({
     id: '/api/public/hooks/reset-admin-credentials',
@@ -246,12 +273,15 @@ export interface FileRoutesByFullPath {
   '/forum': typeof ForumRoute
   '/inscription': typeof InscriptionRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/membre': typeof MembreRouteWithChildren
   '/miprojet': typeof MiprojetRouteWithChildren
   '/opportunites': typeof OpportunitesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/actualites': typeof AdminActualitesRoute
   '/admin/cotisations': typeof AdminCotisationsRoute
   '/admin/droits-adhesion': typeof AdminDroitsAdhesionRoute
@@ -271,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin/': typeof AdminIndexRoute
   '/membre/': typeof MembreIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
   '/api/public/hooks/reset-admin-credentials': typeof ApiPublicHooksResetAdminCredentialsRoute
@@ -284,11 +315,14 @@ export interface FileRoutesByTo {
   '/forum': typeof ForumRoute
   '/inscription': typeof InscriptionRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/miprojet': typeof MiprojetRouteWithChildren
   '/opportunites': typeof OpportunitesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/actualites': typeof AdminActualitesRoute
   '/admin/cotisations': typeof AdminCotisationsRoute
   '/admin/droits-adhesion': typeof AdminDroitsAdhesionRoute
@@ -308,6 +342,7 @@ export interface FileRoutesByTo {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin': typeof AdminIndexRoute
   '/membre': typeof MembreIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
   '/api/public/hooks/reset-admin-credentials': typeof ApiPublicHooksResetAdminCredentialsRoute
@@ -323,12 +358,15 @@ export interface FileRoutesById {
   '/forum': typeof ForumRoute
   '/inscription': typeof InscriptionRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/membre': typeof MembreRouteWithChildren
   '/miprojet': typeof MiprojetRouteWithChildren
   '/opportunites': typeof OpportunitesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/actualites': typeof AdminActualitesRoute
   '/admin/cotisations': typeof AdminCotisationsRoute
   '/admin/droits-adhesion': typeof AdminDroitsAdhesionRoute
@@ -348,6 +386,7 @@ export interface FileRoutesById {
   '/verifier/$matricule': typeof VerifierMatriculeRoute
   '/admin/': typeof AdminIndexRoute
   '/membre/': typeof MembreIndexRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/hooks/enqueue-cotisation-reminders': typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   '/api/public/hooks/process-notification-queue': typeof ApiPublicHooksProcessNotificationQueueRoute
   '/api/public/hooks/reset-admin-credentials': typeof ApiPublicHooksResetAdminCredentialsRoute
@@ -364,12 +403,15 @@ export interface FileRouteTypes {
     | '/forum'
     | '/inscription'
     | '/login'
+    | '/mcp'
     | '/membre'
     | '/miprojet'
     | '/opportunites'
     | '/reset-password'
     | '/scanner'
     | '/sitemap.xml'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/actualites'
     | '/admin/cotisations'
     | '/admin/droits-adhesion'
@@ -389,6 +431,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin/'
     | '/membre/'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
     | '/api/public/hooks/reset-admin-credentials'
@@ -402,11 +445,14 @@ export interface FileRouteTypes {
     | '/forum'
     | '/inscription'
     | '/login'
+    | '/mcp'
     | '/miprojet'
     | '/opportunites'
     | '/reset-password'
     | '/scanner'
     | '/sitemap.xml'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/actualites'
     | '/admin/cotisations'
     | '/admin/droits-adhesion'
@@ -426,6 +472,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin'
     | '/membre'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
     | '/api/public/hooks/reset-admin-credentials'
@@ -440,12 +487,15 @@ export interface FileRouteTypes {
     | '/forum'
     | '/inscription'
     | '/login'
+    | '/mcp'
     | '/membre'
     | '/miprojet'
     | '/opportunites'
     | '/reset-password'
     | '/scanner'
     | '/sitemap.xml'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/actualites'
     | '/admin/cotisations'
     | '/admin/droits-adhesion'
@@ -465,6 +515,7 @@ export interface FileRouteTypes {
     | '/verifier/$matricule'
     | '/admin/'
     | '/membre/'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/hooks/enqueue-cotisation-reminders'
     | '/api/public/hooks/process-notification-queue'
     | '/api/public/hooks/reset-admin-credentials'
@@ -480,14 +531,18 @@ export interface RootRouteChildren {
   ForumRoute: typeof ForumRoute
   InscriptionRoute: typeof InscriptionRoute
   LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
   MembreRoute: typeof MembreRouteWithChildren
   MiprojetRoute: typeof MiprojetRouteWithChildren
   OpportunitesRoute: typeof OpportunitesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScannerRoute: typeof ScannerRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiSendAdminInvitationRoute: typeof ApiSendAdminInvitationRoute
   VerifierMatriculeRoute: typeof VerifierMatriculeRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicHooksEnqueueCotisationRemindersRoute: typeof ApiPublicHooksEnqueueCotisationRemindersRoute
   ApiPublicHooksProcessNotificationQueueRoute: typeof ApiPublicHooksProcessNotificationQueueRoute
   ApiPublicHooksResetAdminCredentialsRoute: typeof ApiPublicHooksResetAdminCredentialsRoute
@@ -535,6 +590,13 @@ declare module '@tanstack/react-router' {
       path: '/membre'
       fullPath: '/membre'
       preLoaderRoute: typeof MembreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -733,6 +795,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminActualitesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/reset-admin-credentials': {
       id: '/api/public/hooks/reset-admin-credentials'
       path: '/api/public/hooks/reset-admin-credentials'
@@ -828,14 +911,19 @@ const rootRouteChildren: RootRouteChildren = {
   ForumRoute: ForumRoute,
   InscriptionRoute: InscriptionRoute,
   LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
   MembreRoute: MembreRouteWithChildren,
   MiprojetRoute: MiprojetRouteWithChildren,
   OpportunitesRoute: OpportunitesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ScannerRoute: ScannerRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiSendAdminInvitationRoute: ApiSendAdminInvitationRoute,
   VerifierMatriculeRoute: VerifierMatriculeRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicHooksEnqueueCotisationRemindersRoute:
     ApiPublicHooksEnqueueCotisationRemindersRoute,
   ApiPublicHooksProcessNotificationQueueRoute:

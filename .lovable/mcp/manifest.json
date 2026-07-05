@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "mugec-ci-mcp",
+      "version": "0.1.0",
+      "title": "MUGEC-CI"
+    },
+    "tools": [
+      {
+        "name": "list_news",
+        "title": "Lister les actualités MUGEC-CI",
+        "description": "Retourne les actualités publiées (titre, résumé, date, URL).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "default": 10,
+              "description": "Nombre maximum d'articles à retourner.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_opportunities",
+        "title": "Lister les opportunités MUGEC-CI",
+        "description": "Retourne les opportunités publiées (emploi, formation, marché) avec date limite.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "default": 10,
+              "description": "Nombre maximum d'opportunités à retourner.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "type": {
+              "description": "Filtre optionnel sur le type (Emploi, Formation, Marché public...).",
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
