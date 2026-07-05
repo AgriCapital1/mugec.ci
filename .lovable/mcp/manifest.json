@@ -3,19 +3,23 @@
   "sdk_version": "0.20.0",
   "path": "/mcp",
   "auth": {
-    "type": "none"
+    "type": "oauth",
+    "issuer": "https://yzamfjkxitsvfczairpf.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
   },
   "mcp": {
     "server": {
       "name": "mugec-ci-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "MUGEC-CI"
     },
     "tools": [
       {
         "name": "list_news",
         "title": "Lister les actualités MUGEC-CI",
-        "description": "Retourne les actualités publiées (titre, résumé, date, URL).",
+        "description": "Retourne les actualités visibles par l'utilisateur authentifié, via les règles RLS Supabase.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -40,7 +44,7 @@
       {
         "name": "list_opportunities",
         "title": "Lister les opportunités MUGEC-CI",
-        "description": "Retourne les opportunités publiées (emploi, formation, marché) avec date limite.",
+        "description": "Retourne les opportunités visibles par l'utilisateur authentifié, via les règles RLS Supabase.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -61,6 +65,76 @@
               "description": "Filtre optionnel sur le type (Emploi, Formation, Marché public...)."
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_news",
+        "title": "Créer une actualité MUGEC-CI",
+        "description": "Crée une actualité avec titre, description et image optionnelle, en agissant comme l'utilisateur authentifié via RLS.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200,
+              "description": "Titre de l'actualité."
+            },
+            "description": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 500,
+              "description": "Résumé ou description courte."
+            },
+            "content_html": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 30000,
+              "description": "Contenu HTML complet optionnel."
+            },
+            "category": {
+              "type": "string",
+              "maxLength": 80,
+              "description": "Catégorie éditoriale optionnelle."
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "maxItems": 10,
+              "description": "Mots-clés optionnels."
+            },
+            "published": {
+              "type": "boolean",
+              "default": false,
+              "description": "Publier immédiatement ou conserver en brouillon."
+            },
+            "cover_image_data_url": {
+              "type": "string",
+              "description": "Image de couverture en data URL base64. SVG interdit."
+            },
+            "cover_image_filename": {
+              "type": "string",
+              "maxLength": 120,
+              "description": "Nom du fichier image optionnel."
+            }
+          },
+          "required": [
+            "title",
+            "description"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
