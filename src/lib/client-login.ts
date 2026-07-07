@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { loginWithIdentifier } from "@/lib/login.functions";
 
 export type Portal = "member" | "admin" | "miprojet";
 
@@ -39,6 +40,19 @@ export async function loginClientSide(
   const generic: LoginResult = { ok: false, error: "invalid_credentials" };
   const id = identifier.trim().toLowerCase();
   if (id.length < 3 || password.length === 0) return generic;
+
+  try {
+    const serverResult = await loginWithIdentifier({ data: { identifier: id, password, portal } });
+    if (serverResult?.ok && serverResult.access_token && serverResult.refresh_token) {
+      const { error } = await supabase.auth.setSession({
+        access_token: serverResult.access_token,
+        refresh_token: serverResult.refresh_token,
+      });
+      if (!error) return { ok: true, dashboard_path: serverResult.dashboard_path };
+    }
+  } catch {
+    // Fallback direct ci-dessous pour les hébergements qui bloquent les server functions.
+  }
 
   const { data: email, error: rpcErr } = await supabase.rpc("resolve_login_email", {
     p_identifier: id,
@@ -81,6 +95,6 @@ export async function loginClientSide(
     return generic;
   }
 
-  const dashboard_path = target === "/admin/miprojet" ? "/miprojet" : target;
+  const dashboard_path = target === "/admin/miprojet" ? (portal === "admin" ? "/admin" : "/miprojet") : target;
   return { ok: true, dashboard_path };
 }

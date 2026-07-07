@@ -17,9 +17,23 @@ export async function getCurrentSupabaseUser(): Promise<User | null> {
     .then(({ data, error }) => (!error && data.user ? data.user : storedUser))
     .catch(() => storedUser);
   const timeout = new Promise<User | null>((resolve) => {
-    window.setTimeout(() => resolve(storedUser), 800);
+    globalThis.setTimeout(() => resolve(storedUser), 800);
   });
   return Promise.race([freshUser, timeout]);
+}
+
+export async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = globalThis.setTimeout(() => resolve(fallback), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) globalThis.clearTimeout(timer);
+  }
 }
 
 function readStoredSession(): Session | null {
@@ -56,11 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     setSession(readStoredSession());
-    supabase.auth.getSession().then(async ({ data }) => {
+    withTimeout(supabase.auth.getSession(), 1_200, { data: { session: readStoredSession() }, error: null } as any).then(async ({ data }) => {
       if (!mounted) return;
       setSession(data.session ?? readStoredSession());
       if (data.session) {
-        await supabase.auth.getUser().catch(() => null);
+        await withTimeout(supabase.auth.getUser(), 1_200, null as any).catch(() => null);
       }
       setLoading(false);
     }).catch(() => {
