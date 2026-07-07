@@ -37,6 +37,7 @@ import { Route as MembreCotisationsRouteImport } from './routes/membre/cotisatio
 import { Route as MembreCarteRouteImport } from './routes/membre/carte'
 import { Route as ApiSendAdminInvitationRouteImport } from './routes/api/send-admin-invitation'
 import { Route as AdminPrestationsRouteImport } from './routes/admin/prestations'
+import { Route as AdminParametresCarteRouteImport } from './routes/admin/parametres-carte'
 import { Route as AdminOpportunitesRouteImport } from './routes/admin/opportunites'
 import { Route as AdminNotificationsRouteImport } from './routes/admin/notifications'
 import { Route as AdminMiprojetRouteImport } from './routes/admin/miprojet'
@@ -191,6 +192,11 @@ const AdminPrestationsRoute = AdminPrestationsRouteImport.update({
   path: '/prestations',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminParametresCarteRoute = AdminParametresCarteRouteImport.update({
+  id: '/parametres-carte',
+  path: '/parametres-carte',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminOpportunitesRoute = AdminOpportunitesRouteImport.update({
   id: '/opportunites',
   path: '/opportunites',
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/admin/miprojet': typeof AdminMiprojetRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/opportunites': typeof AdminOpportunitesRoute
+  '/admin/parametres-carte': typeof AdminParametresCarteRoute
   '/admin/prestations': typeof AdminPrestationsRoute
   '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
   '/membre/carte': typeof MembreCarteRoute
@@ -330,6 +337,7 @@ export interface FileRoutesByTo {
   '/admin/miprojet': typeof AdminMiprojetRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/opportunites': typeof AdminOpportunitesRoute
+  '/admin/parametres-carte': typeof AdminParametresCarteRoute
   '/admin/prestations': typeof AdminPrestationsRoute
   '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
   '/membre/carte': typeof MembreCarteRoute
@@ -374,6 +382,7 @@ export interface FileRoutesById {
   '/admin/miprojet': typeof AdminMiprojetRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/opportunites': typeof AdminOpportunitesRoute
+  '/admin/parametres-carte': typeof AdminParametresCarteRoute
   '/admin/prestations': typeof AdminPrestationsRoute
   '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
   '/membre/carte': typeof MembreCarteRoute
@@ -419,6 +428,7 @@ export interface FileRouteTypes {
     | '/admin/miprojet'
     | '/admin/notifications'
     | '/admin/opportunites'
+    | '/admin/parametres-carte'
     | '/admin/prestations'
     | '/api/send-admin-invitation'
     | '/membre/carte'
@@ -460,6 +470,7 @@ export interface FileRouteTypes {
     | '/admin/miprojet'
     | '/admin/notifications'
     | '/admin/opportunites'
+    | '/admin/parametres-carte'
     | '/admin/prestations'
     | '/api/send-admin-invitation'
     | '/membre/carte'
@@ -503,6 +514,7 @@ export interface FileRouteTypes {
     | '/admin/miprojet'
     | '/admin/notifications'
     | '/admin/opportunites'
+    | '/admin/parametres-carte'
     | '/admin/prestations'
     | '/api/send-admin-invitation'
     | '/membre/carte'
@@ -746,6 +758,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPrestationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/parametres-carte': {
+      id: '/admin/parametres-carte'
+      path: '/parametres-carte'
+      fullPath: '/admin/parametres-carte'
+      preLoaderRoute: typeof AdminParametresCarteRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/opportunites': {
       id: '/admin/opportunites'
       path: '/opportunites'
@@ -848,6 +867,7 @@ interface AdminRouteChildren {
   AdminMiprojetRoute: typeof AdminMiprojetRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOpportunitesRoute: typeof AdminOpportunitesRoute
+  AdminParametresCarteRoute: typeof AdminParametresCarteRoute
   AdminPrestationsRoute: typeof AdminPrestationsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -860,6 +880,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMiprojetRoute: AdminMiprojetRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOpportunitesRoute: AdminOpportunitesRoute,
+  AdminParametresCarteRoute: AdminParametresCarteRoute,
   AdminPrestationsRoute: AdminPrestationsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
