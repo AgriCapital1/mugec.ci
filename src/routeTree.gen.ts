@@ -34,6 +34,7 @@ import { Route as MembrePrestationsRouteImport } from './routes/membre/prestatio
 import { Route as MembreFicheRouteImport } from './routes/membre/fiche'
 import { Route as MembreDocumentsRouteImport } from './routes/membre/documents'
 import { Route as MembreCotisationsRouteImport } from './routes/membre/cotisations'
+import { Route as MembreCarteRouteImport } from './routes/membre/carte'
 import { Route as ApiSendAdminInvitationRouteImport } from './routes/api/send-admin-invitation'
 import { Route as AdminPrestationsRouteImport } from './routes/admin/prestations'
 import { Route as AdminParametresCarteRouteImport } from './routes/admin/parametres-carte'
@@ -176,6 +177,11 @@ const MembreCotisationsRoute = MembreCotisationsRouteImport.update({
   path: '/cotisations',
   getParentRoute: () => MembreRoute,
 } as any)
+const MembreCarteRoute = MembreCarteRouteImport.update({
+  id: '/carte',
+  path: '/carte',
+  getParentRoute: () => MembreRoute,
+} as any)
 const ApiSendAdminInvitationRoute = ApiSendAdminInvitationRouteImport.update({
   id: '/api/send-admin-invitation',
   path: '/api/send-admin-invitation',
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/admin/parametres-carte': typeof AdminParametresCarteRoute
   '/admin/prestations': typeof AdminPrestationsRoute
   '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
+  '/membre/carte': typeof MembreCarteRoute
   '/membre/cotisations': typeof MembreCotisationsRoute
   '/membre/documents': typeof MembreDocumentsRoute
   '/membre/fiche': typeof MembreFicheRoute
@@ -333,6 +340,7 @@ export interface FileRoutesByTo {
   '/admin/parametres-carte': typeof AdminParametresCarteRoute
   '/admin/prestations': typeof AdminPrestationsRoute
   '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
+  '/membre/carte': typeof MembreCarteRoute
   '/membre/cotisations': typeof MembreCotisationsRoute
   '/membre/documents': typeof MembreDocumentsRoute
   '/membre/fiche': typeof MembreFicheRoute
@@ -377,6 +385,7 @@ export interface FileRoutesById {
   '/admin/parametres-carte': typeof AdminParametresCarteRoute
   '/admin/prestations': typeof AdminPrestationsRoute
   '/api/send-admin-invitation': typeof ApiSendAdminInvitationRoute
+  '/membre/carte': typeof MembreCarteRoute
   '/membre/cotisations': typeof MembreCotisationsRoute
   '/membre/documents': typeof MembreDocumentsRoute
   '/membre/fiche': typeof MembreFicheRoute
@@ -422,6 +431,7 @@ export interface FileRouteTypes {
     | '/admin/parametres-carte'
     | '/admin/prestations'
     | '/api/send-admin-invitation'
+    | '/membre/carte'
     | '/membre/cotisations'
     | '/membre/documents'
     | '/membre/fiche'
@@ -463,6 +473,7 @@ export interface FileRouteTypes {
     | '/admin/parametres-carte'
     | '/admin/prestations'
     | '/api/send-admin-invitation'
+    | '/membre/carte'
     | '/membre/cotisations'
     | '/membre/documents'
     | '/membre/fiche'
@@ -506,6 +517,7 @@ export interface FileRouteTypes {
     | '/admin/parametres-carte'
     | '/admin/prestations'
     | '/api/send-admin-invitation'
+    | '/membre/carte'
     | '/membre/cotisations'
     | '/membre/documents'
     | '/membre/fiche'
@@ -725,6 +737,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MembreCotisationsRouteImport
       parentRoute: typeof MembreRoute
     }
+    '/membre/carte': {
+      id: '/membre/carte'
+      path: '/carte'
+      fullPath: '/membre/carte'
+      preLoaderRoute: typeof MembreCarteRouteImport
+      parentRoute: typeof MembreRoute
+    }
     '/api/send-admin-invitation': {
       id: '/api/send-admin-invitation'
       path: '/api/send-admin-invitation'
@@ -869,6 +888,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface MembreRouteChildren {
+  MembreCarteRoute: typeof MembreCarteRoute
   MembreCotisationsRoute: typeof MembreCotisationsRoute
   MembreDocumentsRoute: typeof MembreDocumentsRoute
   MembreFicheRoute: typeof MembreFicheRoute
@@ -878,6 +898,7 @@ interface MembreRouteChildren {
 }
 
 const MembreRouteChildren: MembreRouteChildren = {
+  MembreCarteRoute: MembreCarteRoute,
   MembreCotisationsRoute: MembreCotisationsRoute,
   MembreDocumentsRoute: MembreDocumentsRoute,
   MembreFicheRoute: MembreFicheRoute,
