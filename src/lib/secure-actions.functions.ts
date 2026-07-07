@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-const db = supabaseAdmin as any;
 
 const adminRoles = [
   "super_admin", "admin_national", "admin_regional", "admin_local", "agent_saisie",
@@ -15,6 +12,8 @@ const adminRoles = [
 const memberStatusSchema = z.enum(["actif", "en_attente", "suspendu", "decede", "marie", "licencie", "assiste", "retraite"]);
 
 async function assertRole(userId: string, roles: string[]) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin as any;
   const { data, error } = await db
     .from("user_roles")
     .select("role")
@@ -25,6 +24,8 @@ async function assertRole(userId: string, roles: string[]) {
 }
 
 async function countRows(table: string, filters?: (query: any) => any) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin as any;
   let query = db.from(table).select("id", { count: "exact", head: true });
   if (filters) query = filters(query);
   const { count } = await query;
@@ -32,6 +33,8 @@ async function countRows(table: string, filters?: (query: any) => any) {
 }
 
 async function sumRows(table: string, column: string, filters?: (query: any) => any) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const db = supabaseAdmin as any;
   let query = db.from(table).select(column).limit(10000);
   if (filters) query = filters(query);
   const { data } = await query;
@@ -64,6 +67,8 @@ export const setMemberStatusSecure = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ id: z.string().uuid(), statut: memberStatusSchema }).parse(input))
   .handler(async ({ data, context }) => {
     await assertRole(context.userId, adminRoles);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const { error } = await db.from("members").update({ statut: data.statut }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -74,6 +79,8 @@ export const updateMemberSafe = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ id: z.string().uuid() }).passthrough().parse(input))
   .handler(async ({ data, context }) => {
     await assertRole(context.userId, adminRoles);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const allowed = ["nom", "prenoms", "email", "telephone", "cni", "adresse", "photo_url", "collectivite", "region", "direction", "fonction", "matricule_pro", "sexe", "lieu_naissance", "date_naissance", "date_embauche", "ayants_droit", "type_membre", "suspended_reason"];
     const patch = Object.fromEntries(allowed.filter((key) => key in data).map((key) => [key, data[key] === "" ? null : data[key]]));
     const { error } = await db.from("members").update(patch).eq("id", data.id);
@@ -86,6 +93,8 @@ export const markCotisationPaidSecure = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertRole(context.userId, adminRoles);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const { error } = await db.from("cotisations").update({ statut: "paye", paye_le: new Date().toISOString() }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -96,6 +105,8 @@ export const saveNotificationTemplateSecure = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ event: z.string().trim().min(1).max(120), channel: z.enum(["email", "sms", "whatsapp", "in_app"]), title: z.string().trim().min(1).max(200), body: z.string().trim().min(1).max(4000), active: z.boolean().optional() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertRole(context.userId, ["super_admin"]);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const { error } = await db.from("notification_templates").insert({ ...data, active: data.active ?? true });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -106,6 +117,8 @@ export const toggleNotificationTemplateSecure = createServerFn({ method: "POST" 
   .inputValidator((input) => z.object({ id: z.string().uuid(), active: z.boolean() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertRole(context.userId, ["super_admin"]);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const { error } = await db.from("notification_templates").update({ active: data.active }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -115,6 +128,8 @@ export const validatePrestationStepSecure = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ requestId: z.string().uuid(), action: z.enum(["valide", "rejete"]), motif: z.string().max(1000).optional() }).parse(input))
   .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const { data: req, error: reqErr } = await db.from("prestation_requests").select("*").eq("id", data.requestId).single();
     if (reqErr || !req) throw new Error("Demande introuvable");
     const required = ["delegue_section", "secretaire_regional", "secretaire_general", "tresorier_national"][Math.max(0, Number(req.step_validation) - 1)] ?? "system";
@@ -133,6 +148,8 @@ export const getMiprojetDashboardData = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ page: z.number().int().min(0).default(0) }).parse(input ?? {}))
   .handler(async ({ data, context }) => {
     await assertRole(context.userId, ["super_admin"]);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     const [{ data: tx }, { data: allTx }, parts_miprojet_mois, parts_mutuelle_mois, transactions_total, transactions_paye, transactions_attente] = await Promise.all([
       db.from("transactions_miprojet").select("id, montant, statut, reference, created_at, date_virement").order("created_at", { ascending: false }).range(data.page * 50, data.page * 50 + 49),
@@ -150,6 +167,8 @@ export const getMemberPublicInfoSecure = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ matricule: z.string().trim().min(1).max(80) }).parse(input))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const { data: member, error } = await db.from("members").select("matricule, nom, prenoms, photo_url, collectivite, region, fonction, statut, type_membre, date_inscription").eq("matricule", data.matricule).maybeSingle();
     if (error) throw new Error(error.message);
     return member;
@@ -158,6 +177,8 @@ export const getMemberPublicInfoSecure = createServerFn({ method: "GET" })
 export const submitContactMessage = createServerFn({ method: "POST" })
   .inputValidator((input) => z.object({ nom: z.string().trim().min(2).max(120), email: z.string().trim().email().max(255), telephone: z.string().trim().max(32).optional(), sujet: z.string().trim().max(200).optional(), message: z.string().trim().min(5).max(4000) }).parse(input))
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
     const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { count } = await db.from("contact_messages").select("id", { count: "exact", head: true }).eq("email", data.email).gte("created_at", since);
     if ((count ?? 0) >= 3) throw new Error("Trop de messages envoyés. Réessayez plus tard.");
