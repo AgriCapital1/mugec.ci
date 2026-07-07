@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getCurrentSupabaseUser, withTimeout } from "@/lib/auth";
 import { loginClientSide } from "@/lib/client-login";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,20 +31,17 @@ function MiprojetGate() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getCurrentSupabaseUser();
       if (!alive) return;
       if (!user) {
         setState("login");
         return;
       }
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
+      const { data: roles } = await withTimeout(
+        supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle(),
+        1_500,
+        { data: null, error: new Error("timeout") } as any,
+      );
       setState(roles ? "ready" : "login");
     })();
     return () => {

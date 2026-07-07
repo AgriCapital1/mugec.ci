@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /** Remplace {{var}} dans un template par le contexte. */
@@ -27,7 +26,7 @@ async function sendSms(to: string, body: string) {
   }
 }
 
-const BRAND_LOGO_URL = process.env.BRAND_LOGO_URL ?? "https://mugec-ci.ivoireprojet.com/mugec-logo.png";
+const BRAND_LOGO_URL = "https://mugec-ci.ivoireprojet.com/mugec-logo.png";
 const BRAND_NAME = "MUGEC-CI";
 const BRAND_FOOTER = "MUGEC-CI · Mutuelle Générale des Collectivités de Côte d'Ivoire";
 
@@ -161,6 +160,7 @@ export const dispatchNotification = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context: ctx }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let { event, memberId, userId, to, channels, context } = data;
     // Authorization: caller must be admin OR be sending to their own user/member record
     const callerId = ctx.userId;

@@ -222,6 +222,7 @@ export const ADMIN_NAV: NavItem[] = [
       { to: "/admin/notifications", label: "Notifications" },
     ],
   },
+  { to: "/admin/parametres-carte", label: "Carte" },
 ];
 
 // Navigation séparée du back-office super administrateur.

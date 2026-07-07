@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Endpoint one-shot pour réaligner les mots de passe des deux comptes admin
@@ -18,6 +17,7 @@ export const Route = createFileRoute("/api/public/hooks/reset-admin-credentials"
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const expected = process.env.ADMIN_RESET_TOKEN;
         const provided = request.headers.get("x-admin-reset-token");
         if (!expected || !provided || provided !== expected) {
@@ -37,8 +37,8 @@ export const Route = createFileRoute("/api/public/hooks/reset-admin-credentials"
         }
 
         const targets: Array<{ email: string; password: string; label: string }> = [
-          { email: "admin@mugec-ci.local", password: mugecPwd, label: "mugecadmin" },
-          { email: "inoce@miprojet.local", password: miprojetPwd, label: "admininoce" },
+          { email: "adminmgec@mugec-ci.local", password: mugecPwd, label: "adminmgec" },
+          { email: "admininoce@miprojet.local", password: miprojetPwd, label: "admininoce" },
         ];
 
         const report: Array<{ label: string; ok: boolean; error?: string }> = [];

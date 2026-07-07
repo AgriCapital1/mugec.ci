@@ -132,6 +132,112 @@ export type Database = {
           },
         ]
       }
+      member_card_regeneration_jobs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          member_id: string | null
+          processed_count: number
+          reason: string
+          scope: string
+          started_at: string | null
+          status: string
+          total_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          member_id?: string | null
+          processed_count?: number
+          reason?: string
+          scope?: string
+          started_at?: string | null
+          status?: string
+          total_count?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          member_id?: string | null
+          processed_count?: number
+          reason?: string
+          scope?: string
+          started_at?: string | null
+          status?: string
+          total_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_card_regeneration_jobs_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_card_renders: {
+        Row: {
+          config_key: string
+          config_version: string
+          created_at: string
+          error_message: string | null
+          id: string
+          member_id: string
+          member_version: string
+          render_payload: Json
+          render_status: string
+          rendered_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          config_key?: string
+          config_version?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          member_id: string
+          member_version?: string
+          render_payload?: Json
+          render_status?: string
+          rendered_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config_key?: string
+          config_version?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          member_id?: string
+          member_version?: string
+          render_payload?: Json
+          render_status?: string
+          rendered_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_card_renders_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       members: {
         Row: {
           adresse: string | null
@@ -471,6 +577,10 @@ export type Database = {
     Functions: {
       current_user_dashboard_path: { Args: never; Returns: string }
       dashboard_path_for: { Args: { _user_id: string }; Returns: string }
+      enqueue_member_card_regeneration: {
+        Args: { _reason?: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -481,6 +591,10 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       resolve_login_email: { Args: { p_identifier: string }; Returns: string }
+      touch_member_card_render: {
+        Args: { _member_id: string; _reason?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
