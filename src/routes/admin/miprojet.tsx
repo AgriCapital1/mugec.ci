@@ -204,6 +204,7 @@ export function MiProjetDashboard() {
       </div>
     );
   }
+  if (authorized === false) return null;
 
   return (
     <div className="min-h-screen" style={{ background: "var(--gradient-surface)" }}>
