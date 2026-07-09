@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Endpoint cron : enfile les rappels de cotisations en retard (J+3, J+7, J+14).
@@ -9,6 +8,7 @@ export const Route = createFileRoute("/api/public/hooks/enqueue-cotisation-remin
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
         const provided = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
         if (!expected || provided !== expected) {

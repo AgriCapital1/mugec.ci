@@ -1,10 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const BRAND_NAME = "MUGEC-CI";
 const BRAND_FOOTER = "MUGEC-CI · Mutuelle Générale des Collectivités de Côte d'Ivoire";
-const BRAND_LOGO_URL =
-  process.env.BRAND_LOGO_URL ?? "https://mugec-ci.ivoireprojet.com/mugec-logo.png";
+const BRAND_LOGO_URL = "https://mugec-ci.ivoireprojet.com/mugec-logo.png";
 
 function escapeHtml(s: string) {
   return s
@@ -88,6 +86,7 @@ export const Route = createFileRoute("/api/public/hooks/process-notification-que
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
         const provided = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
         if (!expected || provided !== expected) {

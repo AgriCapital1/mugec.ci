@@ -31,18 +31,22 @@ function MiprojetGate() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const user = await getCurrentSupabaseUser();
-      if (!alive) return;
-      if (!user) {
-        setState("login");
-        return;
+      try {
+        const user = await getCurrentSupabaseUser();
+        if (!alive) return;
+        if (!user) {
+          setState("login");
+          return;
+        }
+        const { data: roles } = await withTimeout(
+          supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle(),
+          1_500,
+          { data: null, error: new Error("timeout") } as any,
+        );
+        setState(roles ? "ready" : "login");
+      } catch {
+        if (alive) setState("login");
       }
-      const { data: roles } = await withTimeout(
-        supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle(),
-        1_500,
-        { data: null, error: new Error("timeout") } as any,
-      );
-      setState(roles ? "ready" : "login");
     })();
     return () => {
       alive = false;

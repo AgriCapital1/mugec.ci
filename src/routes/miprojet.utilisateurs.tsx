@@ -81,16 +81,21 @@ function MiprojetUsers() {
 
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate({ to: "/miprojet" }); return; }
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
-      if (!data) { navigate({ to: "/miprojet" }); return; }
-      setAuthorized(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setAuthorized(false); navigate({ to: "/miprojet" }); return; }
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "super_admin")
+          .maybeSingle();
+        if (!data) { setAuthorized(false); navigate({ to: "/miprojet" }); return; }
+        setAuthorized(true);
+      } catch {
+        setAuthorized(false);
+        navigate({ to: "/miprojet" });
+      }
     })();
   }, [navigate]);
 
@@ -210,6 +215,7 @@ function MiprojetUsers() {
   if (authorized === null) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Vérification…</div>;
   }
+  if (authorized === false) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/40">

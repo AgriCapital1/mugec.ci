@@ -60,7 +60,7 @@ export const ADMIN_ROLES = [
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(() => readStoredSession());
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
