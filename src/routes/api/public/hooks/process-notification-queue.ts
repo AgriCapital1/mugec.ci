@@ -2,8 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 const BRAND_NAME = "MUGEC-CI";
 const BRAND_FOOTER = "MUGEC-CI · Mutuelle Générale des Collectivités de Côte d'Ivoire";
-const BRAND_LOGO_URL =
-  process.env.BRAND_LOGO_URL ?? "https://mugec-ci.ivoireprojet.com/mugec-logo.png";
+const BRAND_LOGO_URL = "https://mugec-ci.ivoireprojet.com/mugec-logo.png";
 
 function escapeHtml(s: string) {
   return s
