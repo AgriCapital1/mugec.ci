@@ -13,6 +13,7 @@ import { loginClientSide } from "@/lib/client-login";
 import logo from "@/assets/mugec-logo.png";
 
 export const Route = createFileRoute("/login")({
+  ssr: false,
   component: Page,
 });
 
