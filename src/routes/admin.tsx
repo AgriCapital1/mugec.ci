@@ -42,23 +42,27 @@ function AdminGate() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const user = await getCurrentSupabaseUser();
-      if (!alive) return;
-      if (!user) {
-        setState("login");
-        return;
+      try {
+        const user = await getCurrentSupabaseUser();
+        if (!alive) return;
+        if (!user) {
+          setState("login");
+          return;
+        }
+        const { data: roles } = await withTimeout(
+          supabase.from("user_roles").select("role").eq("user_id", user.id),
+          1_500,
+          { data: null, error: new Error("timeout") } as any,
+        );
+        const roleList = (roles ?? []).map((r) => String(r.role));
+        // super_admin a accès total à /admin (basculement MIPROJET → MUGEC-CI).
+        const hasAccess =
+          roleList.includes("super_admin") ||
+          roleList.some((role) => MUGEC_ADMIN_ROLES.has(role));
+        setState(hasAccess ? "ready" : "login");
+      } catch {
+        if (alive) setState("login");
       }
-      const { data: roles } = await withTimeout(
-        supabase.from("user_roles").select("role").eq("user_id", user.id),
-        1_500,
-        { data: null, error: new Error("timeout") } as any,
-      );
-      const roleList = (roles ?? []).map((r) => String(r.role));
-      // super_admin a accès total à /admin (basculement MIPROJET → MUGEC-CI).
-      const hasAccess =
-        roleList.includes("super_admin") ||
-        roleList.some((role) => MUGEC_ADMIN_ROLES.has(role));
-      setState(hasAccess ? "ready" : "login");
     })();
     return () => {
       alive = false;

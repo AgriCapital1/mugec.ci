@@ -105,15 +105,22 @@ export function MiProjetDashboard() {
     if (!user?.id) { navigate({ to: "/login" }); return; }
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
-      if (!active) return;
-      if (!data) { navigate({ to: "/admin" }); return; }
-      setAuthorized(true);
+      try {
+        const { data } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "super_admin")
+          .maybeSingle();
+        if (!active) return;
+        if (!data) { setAuthorized(false); navigate({ to: "/admin" }); return; }
+        setAuthorized(true);
+      } catch {
+        if (active) {
+          setAuthorized(false);
+          navigate({ to: "/admin" });
+        }
+      }
     })();
     return () => { active = false; };
   }, [user?.id, authLoading, navigate]);
